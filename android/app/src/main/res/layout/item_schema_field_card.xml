@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fieldCardRoot"
+    style="@style/Widget.PatriGO.Surface.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/fieldCardNameText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            style="@style/TextAppearance.PatriGO.Value" />
+
+        <ImageButton
+            android:id="@+id/fieldEditButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/schema_edit_column_button"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_edit"
+            android:tint="@color/forest" />
+
+        <ImageButton
+            android:id="@+id/fieldDeleteButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/schema_delete_column_button"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_delete"
+            android:tint="@color/amber" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/fieldCardMetaText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        style="@style/TextAppearance.PatriGO.Caption" />
+
+    <LinearLayout
+        android:id="@+id/fieldCardBadgesRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/fieldCardTypeBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag" />
+
+        <TextView
+            android:id="@+id/fieldCardLookupBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/fieldCardUniqueBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/fieldCardRequiredBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/fieldCardOptionSourceBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/fieldCardOptionRoleBadgeText"
+            style="@style/Widget.PatriGO.Tag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textAppearance="@style/TextAppearance.PatriGO.Tag"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

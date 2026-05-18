@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.pwa.offline.HomeFragment"
+        android:label="@string/home_title" />
+
+    <fragment
+        android:id="@+id/schemaFragment"
+        android:name="com.pwa.offline.SchemaFragment"
+        android:label="@string/schema_title" />
+
+    <fragment
+        android:id="@+id/importFragment"
+        android:name="com.pwa.offline.ImportFragment"
+        android:label="@string/import_title" />
+
+    <fragment
+        android:id="@+id/browseFragment"
+        android:name="com.pwa.offline.BrowseFragment"
+        android:label="@string/browse_title" />
+
+    <fragment
+        android:id="@+id/assetQueryFragment"
+        android:name="com.pwa.offline.AssetQueryFragment"
+        android:label="@string/asset_query_title" />
+
+    <fragment
+        android:id="@+id/recordCreateFragment"
+        android:name="com.pwa.offline.RecordCreateFragment"
+        android:label="@string/record_create_title" />
+
+    <fragment
+        android:id="@+id/exportFragment"
+        android:name="com.pwa.offline.ExportFragment"
+        android:label="@string/export_title" />
+</navigation>

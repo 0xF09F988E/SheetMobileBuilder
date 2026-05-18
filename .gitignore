@@ -1,0 +1,46 @@
+# Gradle and build outputs
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/app/build/
+android/*/build/
+
+# Local SDK and machine-specific config
+local.properties
+android/local.properties
+android/env.android.ps1
+
+# IDE metadata
+.idea/
+android/.idea/
+*.iml
+*.ipr
+*.iws
+
+# Android Studio capture output
+captures/
+android/captures/
+
+# APK/AAB and signing artifacts
+*.apk
+*.aab
+*.ap_
+*.keystore
+*.jks
+
+# Native and external build outputs
+.cxx/
+android/.cxx/
+externalNativeBuild/
+android/externalNativeBuild/
+
+# Kotlin / Java crash and profiling artifacts
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/assetQueryRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/paper"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        style="@style/Widget.PatriGO.Surface.Panel">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.PatriGO.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/asset_search_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/assetSearchInput"
+                style="@style/Widget.PatriGO.TextInputEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/searchAssetButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="@string/asset_search_button"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/clearSearchButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="@string/asset_clear_button"
+                android:textAllCaps="false" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/recordMetaText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/asset_record_meta_empty"
+        style="@style/TextAppearance.PatriGO.Caption" />
+
+    <TextView
+        android:id="@+id/assetReviewStateText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/asset_review_state_empty"
+        style="@style/TextAppearance.PatriGO.Body" />
+
+    <TextView
+        android:id="@+id/assetStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/asset_status_empty"
+        style="@style/TextAppearance.PatriGO.Body.Muted" />
+
+    <LinearLayout
+        android:id="@+id/assetAdditionalFieldsBar"
+        style="@style/Widget.PatriGO.Surface.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/assetAdditionalFieldsText"
+            style="@style/TextAppearance.PatriGO.Body.Muted"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/asset_additional_fields_hidden" />
+
+        <Button
+            android:id="@+id/assetToggleAdditionalFieldsButton"
+            style="@style/Widget.PatriGO.Button.Xs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/asset_show_additional_fields" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/assetFieldsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:clipToPadding="false" />
+
+    <LinearLayout
+        android:id="@+id/readOnlyActionsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/confirmAssetButton"
+            style="@style/Widget.PatriGO.Button.Xs"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:enabled="false"
+            android:text="@string/asset_confirm_button"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/editAssetButton"
+            style="@style/Widget.PatriGO.Button.Xs"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:enabled="false"
+            android:text="@string/asset_edit_button"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/editActionsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/cancelAssetEditButton"
+            style="@style/Widget.PatriGO.Button.Xs"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:text="@string/asset_cancel_edit_button"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/saveAssetChangesButton"
+            style="@style/Widget.PatriGO.Button.Xs"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:enabled="false"
+            android:text="@string/asset_save_button"
+            android:textAllCaps="false" />
+    </LinearLayout>
+</LinearLayout>

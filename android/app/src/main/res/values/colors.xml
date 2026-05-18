@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="forest">#5717d7</color>
+    <color name="forest_dark">#390998</color>
+    <color name="amber">#e85811</color>
+    <color name="paper">#f3f0f9</color>
+    <color name="paper_alt">#e7e1f4</color>
+    <color name="paper_glass">#f3f0f9</color>
+    <color name="paper_glass_alt">#e7e1f4</color>
+    <color name="paper_glass_tag">#e8f7ed</color>
+    <color name="line">#bda9e4</color>
+    <color name="line_strong">#6f39da</color>
+    <color name="line_glass">#bda9e4</color>
+    <color name="line_glass_strong">#6f39da</color>
+    <color name="success">#328f4a</color>
+    <color name="error">#ae3229</color>
+    <color name="ink">#241b37</color>
+    <color name="muted_ink">#5a4c76</color>
+</resources>

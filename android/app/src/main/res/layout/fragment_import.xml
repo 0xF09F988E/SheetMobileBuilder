@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/paper">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <LinearLayout
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_step_file_title" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/import_step_file_summary" />
+
+                <Button
+                    android:id="@+id/selectFileButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_button_select_file" />
+
+                <TextView
+                    android:id="@+id/selectedFileText"
+                    style="@style/TextAppearance.PatriGO.Body.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/app_surface_card_background"
+                    android:padding="12dp"
+                    android:text="@string/import_no_file" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_step_source_title" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/import_step_source_summary" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_sheet_selector_hint" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.PatriGO.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="@string/import_sheet_selector_hint"
+                    app:endIconMode="dropdown_menu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/importSheetSelector"
+                        style="@style/Widget.PatriGO.TextInputEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_header_row_selector_hint" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.PatriGO.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="@string/import_header_row_selector_hint"
+                    app:endIconMode="dropdown_menu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/importHeaderRowSelector"
+                        style="@style/Widget.PatriGO.TextInputEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_step_target_title" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/import_step_target_summary" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/schema_collection_selector_hint" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.PatriGO.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="@string/schema_collection_selector_hint"
+                    app:endIconMode="dropdown_menu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/importTableSelector"
+                        style="@style/Widget.PatriGO.TextInputEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                    android:id="@+id/clearTableDataButton"
+                    style="@style/Widget.PatriGO.Button.Xs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/import_button_clear_table_data" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_step_review_title" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/import_step_review_summary" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_expected_columns" />
+
+                <TextView
+                    android:id="@+id/expectedColumnsText"
+                    style="@style/TextAppearance.PatriGO.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/app_surface_card_background"
+                    android:padding="12dp"
+                    android:text="@string/preview_empty" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_detected_headers" />
+
+                <TextView
+                    android:id="@+id/headersPreviewText"
+                    style="@style/TextAppearance.PatriGO.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/app_surface_card_background"
+                    android:padding="12dp"
+                    android:text="@string/preview_empty" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_validation_title" />
+
+                <TextView
+                    android:id="@+id/validationPreviewText"
+                    style="@style/TextAppearance.PatriGO.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/app_surface_card_background"
+                    android:padding="12dp"
+                    android:text="@string/import_preview_human" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_step_action_title" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/import_step_action_summary" />
+
+                <Button
+                    android:id="@+id/startImportButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_button_start" />
+
+                <TextView
+                    android:id="@+id/importStatusText"
+                    style="@style/TextAppearance.PatriGO.Body.Md.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_status_idle" />
+
+                <ProgressBar
+                    android:id="@+id/importProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/importProgressSummaryText"
+                    style="@style/TextAppearance.PatriGO.Body.Md"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text=""
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/importProgressMetricsText"
+                    style="@style/TextAppearance.PatriGO.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text=""
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/importResultPanel"
+                style="@style/Widget.PatriGO.Surface.Panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/import_result_title" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/import_summary_read" />
+
+                        <TextView
+                            android:id="@+id/importReadCountText"
+                            style="@style/TextAppearance.PatriGO.Value.Lg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/import_summary_imported" />
+
+                        <TextView
+                            android:id="@+id/importInsertedCountText"
+                            style="@style/TextAppearance.PatriGO.Value.Lg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/import_summary_skipped" />
+
+                        <TextView
+                            android:id="@+id/importSkippedCountText"
+                            style="@style/TextAppearance.PatriGO.Value.Lg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/importObservationsTitleText"
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/import_observations_title" />
+
+                <TextView
+                    android:id="@+id/importObservationsText"
+                    style="@style/TextAppearance.PatriGO.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/app_surface_card_background"
+                    android:padding="12dp"
+                    android:text="@string/import_observations_empty" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/importLoadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <ProgressBar
+                android:id="@+id/importProgressIndicator"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:indeterminate="true" />
+
+            <TextView
+                android:id="@+id/importLoadingText"
+                style="@style/TextAppearance.PatriGO.Body.Md"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="@string/import_loading_default"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/cancelImportOverlayButton"
+                style="@style/Widget.PatriGO.Button.Xs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/import_button_cancel"
+                android:visibility="gone" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>
