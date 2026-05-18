@@ -126,6 +126,9 @@ class AppDatabaseHelper(context: Context) :
                 collection_id INTEGER NOT NULL,
                 action_type TEXT NOT NULL,
                 changed_fields_text TEXT NOT NULL DEFAULT '',
+                latitude REAL,
+                longitude REAL,
+                accuracy_meters REAL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(record_id) REFERENCES $TABLE_RECORDS(id) ON DELETE CASCADE,
                 FOREIGN KEY(collection_id) REFERENCES $TABLE_COLLECTIONS(id) ON DELETE CASCADE
@@ -1032,10 +1035,31 @@ class AppDatabaseHelper(context: Context) :
             val placeholders = recordIds.joinToString(",") { "?" }
             readableDatabase.rawQuery(
                 """
-                SELECT id, created_at, updated_at, review_status, review_action, reviewed_at, changed_fields_text
-                FROM $TABLE_RECORDS
-                WHERE id IN ($placeholders)
-                ORDER BY id ASC
+                SELECT
+                    r.id,
+                    r.created_at,
+                    r.updated_at,
+                    r.review_status,
+                    r.review_action,
+                    r.reviewed_at,
+                    r.changed_fields_text,
+                    rl.latitude,
+                    rl.longitude,
+                    rl.accuracy_meters,
+                    rl.created_at
+                FROM $TABLE_RECORDS r
+                LEFT JOIN $TABLE_REVIEW_LOG rl
+                    ON rl.id = (
+                        SELECT inner_rl.id
+                        FROM $TABLE_REVIEW_LOG inner_rl
+                        WHERE inner_rl.record_id = r.id
+                            AND inner_rl.latitude IS NOT NULL
+                            AND inner_rl.longitude IS NOT NULL
+                        ORDER BY inner_rl.created_at DESC, inner_rl.id DESC
+                        LIMIT 1
+                    )
+                WHERE r.id IN ($placeholders)
+                ORDER BY r.id ASC
                 """.trimIndent(),
                 recordIds.map(Long::toString).toTypedArray()
             ).use { cursor ->
@@ -1047,7 +1071,11 @@ class AppDatabaseHelper(context: Context) :
                         reviewStatus = cursor.getString(3).orEmpty(),
                         reviewAction = cursor.getString(4).orEmpty(),
                         reviewedAt = if (cursor.isNull(5)) "" else cursor.getString(5),
-                        changedFieldsText = cursor.getString(6).orEmpty()
+                        changedFieldsText = cursor.getString(6).orEmpty(),
+                        latitude = if (cursor.isNull(7)) null else cursor.getDouble(7),
+                        longitude = if (cursor.isNull(8)) null else cursor.getDouble(8),
+                        accuracyMeters = if (cursor.isNull(9)) null else cursor.getDouble(9),
+                        locationCapturedAt = if (cursor.isNull(10)) "" else cursor.getString(10)
                     )
                 }
             }
@@ -1072,14 +1100,18 @@ class AppDatabaseHelper(context: Context) :
                 onCancellationCheck()
                 val recordValues = valuesByRecord[recordId].orEmpty()
                 val metadata = metadataByRecord[recordId]
-                val row = ArrayList<String>(fields.size + 7)
+                val row = ArrayList<String>(fields.size + 11)
                 row += recordId.toString()
-                row += metadata?.createdAt.orEmpty()
-                row += metadata?.updatedAt.orEmpty()
+                row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.createdAt.orEmpty())
+                row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.updatedAt.orEmpty())
                 row += metadata?.reviewStatus.orEmpty()
                 row += metadata?.reviewAction.orEmpty()
-                row += metadata?.reviewedAt.orEmpty()
+                row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.reviewedAt.orEmpty())
                 row += metadata?.changedFieldsText.orEmpty()
+                row += metadata?.latitude?.toString().orEmpty()
+                row += metadata?.longitude?.toString().orEmpty()
+                row += metadata?.accuracyMeters?.toString().orEmpty()
+                row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.locationCapturedAt.orEmpty())
                 fields.forEach { field ->
                     row += recordValues[field.id].orEmpty()
                 }
@@ -1258,7 +1290,8 @@ class AppDatabaseHelper(context: Context) :
         recordId: Long,
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>
+        updates: Map<Long, String>,
+        locationMeta: ActionLocationMeta? = null
     ) {
         val db = writableDatabase
         val fieldsById = fields.associateBy { it.id }
@@ -1390,7 +1423,8 @@ class AppDatabaseHelper(context: Context) :
                     recordId = recordId,
                     collectionId = collectionId,
                     actionType = ReviewActionCodes.EDIT_SAVED,
-                    changedFields = changedFields.toList()
+                    changedFields = changedFields.toList(),
+                    locationMeta = locationMeta
                 )
             } else {
                 db.execSQL(
@@ -1408,7 +1442,8 @@ class AppDatabaseHelper(context: Context) :
     fun createRecordValues(
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>
+        updates: Map<Long, String>,
+        locationMeta: ActionLocationMeta? = null
     ): Long {
         val db = writableDatabase
         val fieldsById = fields.associateBy { it.id }
@@ -1505,7 +1540,8 @@ class AppDatabaseHelper(context: Context) :
                 recordId = recordId,
                 collectionId = collectionId,
                 actionType = ReviewActionCodes.CREATED_MANUAL,
-                changedFields = preparedValues.map { it.fieldDisplayName }
+                changedFields = preparedValues.map { it.fieldDisplayName },
+                locationMeta = locationMeta
             )
 
             db.setTransactionSuccessful()
@@ -1515,7 +1551,11 @@ class AppDatabaseHelper(context: Context) :
         }
     }
 
-    fun markRecordAsConforme(recordId: Long, collectionId: Long) {
+    fun markRecordAsConforme(
+        recordId: Long,
+        collectionId: Long,
+        locationMeta: ActionLocationMeta? = null
+    ) {
         val db = writableDatabase
         db.beginTransaction()
         try {
@@ -1531,7 +1571,8 @@ class AppDatabaseHelper(context: Context) :
                 recordId = recordId,
                 collectionId = collectionId,
                 actionType = ReviewActionCodes.CONFIRMED_MANUAL,
-                changedFields = emptyList()
+                changedFields = emptyList(),
+                locationMeta = locationMeta
             )
             db.setTransactionSuccessful()
         } finally {
@@ -2185,7 +2226,8 @@ class AppDatabaseHelper(context: Context) :
         recordId: Long,
         collectionId: Long,
         actionType: String,
-        changedFields: List<String>
+        changedFields: List<String>,
+        locationMeta: ActionLocationMeta? = null
     ) {
         db.insertOrThrow(
             TABLE_REVIEW_LOG,
@@ -2195,6 +2237,9 @@ class AppDatabaseHelper(context: Context) :
                 put("collection_id", collectionId)
                 put("action_type", actionType)
                 put("changed_fields_text", changedFields.joinToString(","))
+                put("latitude", locationMeta?.latitude)
+                put("longitude", locationMeta?.longitude)
+                put("accuracy_meters", locationMeta?.accuracyMeters)
             }
         )
     }
@@ -2208,7 +2253,7 @@ class AppDatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "offline_admin.db"
-        private const val DATABASE_VERSION = 12
+        private const val DATABASE_VERSION = 13
         private const val TABLE_COLLECTIONS = "collections"
         private const val TABLE_FIELDS = "fields"
         private const val TABLE_RECORDS = "records"
@@ -2242,7 +2287,11 @@ private data class ExportRecordMeta(
     val reviewStatus: String,
     val reviewAction: String,
     val reviewedAt: String,
-    val changedFieldsText: String
+    val changedFieldsText: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val accuracyMeters: Double? = null,
+    val locationCapturedAt: String = ""
 )
 
 private data class PreparedValue(

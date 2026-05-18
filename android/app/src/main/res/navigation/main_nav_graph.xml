@@ -38,4 +38,9 @@
         android:id="@+id/exportFragment"
         android:name="com.pwa.offline.ExportFragment"
         android:label="@string/export_title" />
+
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.pwa.offline.AboutFragment"
+        android:label="@string/about_title" />
 </navigation>

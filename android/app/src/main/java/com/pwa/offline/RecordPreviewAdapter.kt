@@ -44,7 +44,7 @@ class RecordPreviewAdapter : RecyclerView.Adapter<RecordPreviewAdapter.RecordVie
             }
             updatedAtText.text = itemView.context.getString(
                 R.string.browse_record_updated_at,
-                record.updatedAt
+                TimestampFormatters.sqliteUtcToDeviceMx(record.updatedAt)
             )
             val body = buildString {
                 if (record.values.isEmpty()) {

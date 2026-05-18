@@ -180,7 +180,7 @@ class AssetQueryViewModel(
         }
     }
 
-    fun save(updates: Map<Long, String>) {
+    fun save(updates: Map<Long, String>, locationMeta: ActionLocationMeta? = null) {
         val detail = _uiState.value.recordDetail ?: return
         activeJob?.cancel()
         activeJob = viewModelScope.launch {
@@ -197,7 +197,8 @@ class AssetQueryViewModel(
                     recordId = detail.recordId,
                     collectionId = detail.collectionId,
                     fields = fields,
-                    updates = updates
+                    updates = updates,
+                    locationMeta = locationMeta
                 )
                 _uiState.update {
                     it.copy(
@@ -222,7 +223,7 @@ class AssetQueryViewModel(
         }
     }
 
-    fun markConforme() {
+    fun markConforme(locationMeta: ActionLocationMeta? = null) {
         val detail = _uiState.value.recordDetail ?: return
         activeJob?.cancel()
         activeJob = viewModelScope.launch {
@@ -234,7 +235,11 @@ class AssetQueryViewModel(
                         errorMessage = null
                     )
                 }
-                val refreshed = repository.markConforme(detail.recordId, detail.collectionId)
+                val refreshed = repository.markConforme(
+                    detail.recordId,
+                    detail.collectionId,
+                    locationMeta
+                )
                 _uiState.update {
                     it.copy(
                         recordDetail = refreshed ?: detail,

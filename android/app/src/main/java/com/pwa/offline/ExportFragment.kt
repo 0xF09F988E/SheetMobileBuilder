@@ -9,8 +9,11 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.TextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -37,6 +40,10 @@ class ExportFragment : Fragment() {
 
     private lateinit var mainTableText: TextView
     private lateinit var formatText: TextView
+    private lateinit var delimiterSelector: AutoCompleteTextView
+    private lateinit var delimiterSummaryText: TextView
+    private lateinit var customDelimiterLayout: TextInputLayout
+    private lateinit var customDelimiterInput: TextInputEditText
     private lateinit var criterionSelector: AutoCompleteTextView
     private lateinit var criterionSummaryText: TextView
     private lateinit var estimatedRecordsText: TextView
@@ -71,6 +78,10 @@ class ExportFragment : Fragment() {
 
         mainTableText = view.findViewById(R.id.exportMainTableText)
         formatText = view.findViewById(R.id.exportFormatText)
+        delimiterSelector = view.findViewById(R.id.exportDelimiterSelector)
+        delimiterSummaryText = view.findViewById(R.id.exportDelimiterSummaryText)
+        customDelimiterLayout = view.findViewById(R.id.exportCustomDelimiterLayout)
+        customDelimiterInput = view.findViewById(R.id.exportCustomDelimiterInput)
         criterionSelector = view.findViewById(R.id.exportCriterionSelector)
         criterionSummaryText = view.findViewById(R.id.exportCriterionSummaryText)
         estimatedRecordsText = view.findViewById(R.id.exportEstimatedRecordsText)
@@ -110,6 +121,13 @@ class ExportFragment : Fragment() {
             val option = viewModel.uiState.value.criterionOptions.getOrNull(position)
             viewModel.selectCriterion(option)
         }
+        delimiterSelector.setOnItemClickListener { _, _, position, _ ->
+            val option = viewModel.uiState.value.delimiterOptions.getOrNull(position)
+            viewModel.selectDelimiter(option)
+        }
+        customDelimiterInput.doAfterTextChanged { editable ->
+            viewModel.updateCustomDelimiter(editable?.toString().orEmpty())
+        }
     }
 
     private fun collectUiState() {
@@ -129,10 +147,33 @@ class ExportFragment : Fragment() {
             )
         )
         criterionSelector.setText(state.selectedCriterionOption?.title.orEmpty(), false)
+        delimiterSelector.setAdapter(
+            ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                state.delimiterOptions
+            )
+        )
+        delimiterSelector.setText(state.selectedDelimiterOption?.title.orEmpty(), false)
 
         mainTableText.text = state.masterCollection?.displayName
             ?: getString(R.string.export_no_master_table)
-        formatText.text = getString(R.string.export_format_value)
+        formatText.text = getString(
+            R.string.export_format_value_with_delimiter,
+            state.resolvedDelimiter ?: getString(R.string.export_delimiter_pending)
+        )
+        delimiterSummaryText.text = state.selectedDelimiterOption?.summary
+            ?: getString(R.string.export_delimiter_empty_summary)
+        customDelimiterLayout.visibility = if (state.requiresCustomDelimiter) View.VISIBLE else View.GONE
+        if (customDelimiterInput.text?.toString() != state.customDelimiterValue) {
+            customDelimiterInput.setText(state.customDelimiterValue)
+            customDelimiterInput.setSelection(customDelimiterInput.text?.length ?: 0)
+        }
+        customDelimiterLayout.error = if (state.requiresCustomDelimiter && state.resolvedDelimiter == null) {
+            getString(R.string.export_error_delimiter_required)
+        } else {
+            null
+        }
         criterionSummaryText.text = state.selectedCriterionOption?.summary
             ?: getString(R.string.export_criterion_empty_summary)
         estimatedRecordsText.text = getString(
@@ -149,6 +190,8 @@ class ExportFragment : Fragment() {
 
         val actionsEnabled = state.isReady && !state.isBusy && !state.isCounting
         criterionSelector.isEnabled = !state.isBusy
+        delimiterSelector.isEnabled = !state.isBusy
+        customDelimiterInput.isEnabled = !state.isBusy
         saveButton.isEnabled = actionsEnabled
         shareButton.isEnabled = actionsEnabled
 

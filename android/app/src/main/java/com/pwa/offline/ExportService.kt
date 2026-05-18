@@ -15,7 +15,11 @@ class ExportService(
         "review_status",
         "review_action",
         "reviewed_at",
-        "changed_fields_text"
+        "changed_fields_text",
+        "meta_latitude",
+        "meta_longitude",
+        "meta_location_accuracy_meters",
+        "meta_location_captured_at"
     )
 
     fun exportToCsv(
@@ -23,6 +27,7 @@ class ExportService(
         collection: CollectionOption,
         fields: List<FieldDefinition>,
         criterion: ExportCriterion,
+        delimiter: String,
         onProgress: (processedRows: Int, totalRows: Int, elapsedMs: Long) -> Unit,
         onCancellationCheck: () -> Unit = {}
     ): ExportExecutionResult {
@@ -38,7 +43,7 @@ class ExportService(
         try {
             val startedAt = SystemClock.elapsedRealtime()
             writer.write('\uFEFF'.code)
-            writer.write((metadataHeaders + fields.map { it.displayName }).joinToString(",") { escapeCsv(it) })
+            writer.write((metadataHeaders + fields.map { it.displayName }).joinToString(delimiter) { escapeCsv(it, delimiter) })
             writer.newLine()
 
             databaseHelper.streamExportRows(
@@ -48,7 +53,7 @@ class ExportService(
                 chunkSize = ExportConfig.rowChunkSize,
                 onRow = { values ->
                     onCancellationCheck()
-                    writer.write(values.joinToString(",") { escapeCsv(it) })
+                    writer.write(values.joinToString(delimiter) { escapeCsv(it, delimiter) })
                     writer.newLine()
                     exportedRows += 1
                     if (exportedRows == totalRows || exportedRows % ExportConfig.progressStep == 0) {
@@ -77,9 +82,9 @@ class ExportService(
         )
     }
 
-    private fun escapeCsv(value: String): String {
+    private fun escapeCsv(value: String, delimiter: String): String {
         val sanitized = value.replace("\r\n", "\n").replace('\r', '\n')
-        val mustQuote = sanitized.contains(',') ||
+        val mustQuote = sanitized.contains(delimiter) ||
             sanitized.contains('"') ||
             sanitized.contains('\n')
         if (!mustQuote) return sanitized

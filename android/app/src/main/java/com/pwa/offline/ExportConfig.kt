@@ -54,3 +54,25 @@ data class ExportCriterionOption(
 ) {
     override fun toString(): String = title
 }
+
+enum class ExportDelimiter(
+    val key: String,
+    val delimiter: String?
+) {
+    COMMA("comma", ","),
+    SEMICOLON("semicolon", ";"),
+    PIPE("pipe", "|"),
+    CUSTOM("custom", null);
+
+    companion object {
+        fun default(): ExportDelimiter = COMMA
+    }
+}
+
+data class ExportDelimiterOption(
+    val delimiter: ExportDelimiter,
+    val title: String,
+    val summary: String
+) {
+    override fun toString(): String = title
+}

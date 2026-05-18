@@ -1,7 +1,10 @@
 package com.pwa.offline
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +13,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -18,11 +24,17 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
 class AssetQueryFragment : Fragment() {
+
+    private sealed interface PendingAction {
+        data class Save(val updates: Map<Long, String>) : PendingAction
+        data object Confirm : PendingAction
+    }
 
     private val viewModel: AssetQueryViewModel by viewModels {
         AssetQueryViewModelFactory(
@@ -50,6 +62,22 @@ class AssetQueryFragment : Fragment() {
     private lateinit var fieldsRecyclerView: RecyclerView
     private lateinit var rootView: View
     private lateinit var fieldAdapter: AssetFieldAdapter
+    private var lastToastStatus: AssetQueryStatus? = null
+    private var pendingAction: PendingAction? = null
+    private val locationPermissions = arrayOf(
+        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+        android.Manifest.permission.ACCESS_FINE_LOCATION
+    )
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            val action = pendingAction ?: return@registerForActivityResult
+            pendingAction = null
+            if (grants.values.any { it }) {
+                performPendingActionWithLocation(action)
+            } else {
+                performPendingAction(action, null)
+            }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -106,11 +134,13 @@ class AssetQueryFragment : Fragment() {
                 viewModel.showAdditionalFields()
             }
         }
-        confirmButton.setOnClickListener { viewModel.markConforme() }
+        confirmButton.setOnClickListener {
+            requestActionWithLocation(PendingAction.Confirm)
+        }
         editButton.setOnClickListener { viewModel.enterEditMode() }
         cancelEditButton.setOnClickListener { viewModel.exitEditMode() }
         saveButton.setOnClickListener {
-            viewModel.save(fieldAdapter.buildUpdates())
+            requestActionWithLocation(PendingAction.Save(fieldAdapter.buildUpdates()))
         }
 
         applyKeyboardInsets()
@@ -125,6 +155,7 @@ class AssetQueryFragment : Fragment() {
     }
 
     private fun renderState(state: AssetQueryUiState) {
+        renderStatusToast(state.status)
         val detail = state.recordDetail
 
         if (detail == null) {
@@ -166,11 +197,93 @@ class AssetQueryFragment : Fragment() {
         }
     }
 
+    private fun renderStatusToast(status: AssetQueryStatus) {
+        if (status == lastToastStatus) return
+        lastToastStatus = status
+        val messageRes = when (status) {
+            AssetQueryStatus.CONFIRMED -> R.string.asset_status_confirmed
+            AssetQueryStatus.SAVED -> R.string.asset_status_saved
+            else -> null
+        } ?: return
+        Toast.makeText(requireContext(), getString(messageRes), Toast.LENGTH_SHORT).show()
+    }
+
     private fun hideKeyboard() {
         searchInput.clearFocus()
         val inputMethodManager =
             requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         inputMethodManager.hideSoftInputFromWindow(searchInput.windowToken, 0)
+    }
+
+    private fun requestActionWithLocation(action: PendingAction) {
+        if (hasAnyLocationPermission()) {
+            if (!ActionLocationCapture.isLocationServiceEnabled(requireContext().applicationContext)) {
+                showLocationServicePrompt(action)
+                return
+            }
+            performPendingActionWithLocation(action)
+            return
+        }
+        pendingAction = action
+        showLocationPermissionPrompt()
+    }
+
+    private fun performPendingActionWithLocation(action: PendingAction) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val locationMeta = runCatching {
+                ActionLocationCapture.captureBestEffort(requireContext().applicationContext)
+            }.getOrNull()
+            performPendingAction(action, locationMeta)
+        }
+    }
+
+    private fun performPendingAction(action: PendingAction, locationMeta: ActionLocationMeta?) {
+        when (action) {
+            is PendingAction.Save -> viewModel.save(action.updates, locationMeta)
+            PendingAction.Confirm -> viewModel.markConforme(locationMeta)
+        }
+    }
+
+    private fun hasAnyLocationPermission(): Boolean {
+        return locationPermissions.any { permission ->
+            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun showLocationPermissionPrompt() {
+        val action = pendingAction ?: return
+        val shouldExplain = locationPermissions.any(::shouldShowRequestPermissionRationale)
+        val messageRes = if (shouldExplain) {
+            R.string.location_permission_rationale
+        } else {
+            R.string.location_permission_request_message
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.location_permission_request_title)
+            .setMessage(messageRes)
+            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
+                pendingAction = null
+                performPendingAction(action, null)
+            }
+            .setPositiveButton(R.string.location_permission_continue) { _, _ ->
+                locationPermissionLauncher.launch(locationPermissions)
+            }
+            .show()
+    }
+
+    private fun showLocationServicePrompt(action: PendingAction) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.location_service_request_title)
+            .setMessage(R.string.location_service_request_message)
+            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
+                pendingAction = null
+                performPendingAction(action, null)
+            }
+            .setPositiveButton(R.string.location_service_open_settings) { _, _ ->
+                pendingAction = null
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            .show()
     }
 
     private fun applyKeyboardInsets() {
@@ -222,7 +335,18 @@ class AssetQueryFragment : Fragment() {
 
             else -> getString(R.string.asset_last_action_unknown)
         }
-        return getString(R.string.asset_last_action_value, actionLabel)
+        val rawTimestamp = when (detail.reviewAction) {
+            ReviewActionCodes.CONFIRMED_MANUAL -> detail.reviewedAt
+            ReviewActionCodes.CREATED_MANUAL,
+            ReviewActionCodes.IMPORTED -> detail.createdAt
+            else -> detail.updatedAt
+        }
+        val formattedTimestamp = TimestampFormatters.sqliteUtcToDeviceMx(rawTimestamp)
+        return if (formattedTimestamp.isBlank()) {
+            getString(R.string.asset_last_action_value, actionLabel)
+        } else {
+            getString(R.string.asset_last_action_value_with_time, actionLabel, formattedTimestamp)
+        }
     }
 
     private fun resolveReviewStatusLabel(statusCode: String): String {

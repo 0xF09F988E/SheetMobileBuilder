@@ -19,45 +19,52 @@ object ModuleRegistry {
         ),
         ModuleDefinition(
             id = "asset_query",
-            title = "Consulta de Activo",
-            summary = "Buscar registros, revisar su informacion y actualizar sus datos.",
+            title = "Consulta",
+            summary = "Buscar registros, revisar su información y actualizar sus datos.",
             destinationId = R.id.assetQueryFragment,
             iconRes = R.drawable.ic_module_asset_query
         ),
         ModuleDefinition(
             id = "record_create",
             title = "Nuevo registro",
-            summary = "Registrar informacion manualmente segun la estructura definida en cada tabla.",
+            summary = "Registrar información manualmente según la estructura definida en cada tabla.",
             destinationId = R.id.recordCreateFragment,
             iconRes = R.drawable.ic_module_record_create
         ),
         ModuleDefinition(
             id = "browse",
-            title = "Exploracion",
+            title = "Exploración",
             summary = "Recorrer y consultar los registros almacenados en cada tabla.",
             destinationId = R.id.browseFragment,
             iconRes = R.drawable.ic_module_browse
         ),
         ModuleDefinition(
             id = "schema",
-            title = "Diseno",
-            summary = "Definir tablas, columnas y reglas para organizar la informacion.",
+            title = "Diseño",
+            summary = "Definir tablas, columnas y reglas para organizar la información.",
             destinationId = R.id.schemaFragment,
             iconRes = R.drawable.ic_module_schema
         ),
         ModuleDefinition(
             id = "import",
-            title = "Importacion",
+            title = "Importación",
             summary = "Cargar archivos Excel y convertir su contenido en registros de la app.",
             destinationId = R.id.importFragment,
             iconRes = R.drawable.ic_module_import
         ),
         ModuleDefinition(
             id = "export",
-            title = "Exportacion",
-            summary = "Generar archivos con la informacion almacenada para descargar o compartir.",
+            title = "Exportación",
+            summary = "Generar archivos con la información almacenada para descargar o compartir.",
             destinationId = R.id.exportFragment,
             iconRes = R.drawable.ic_module_export
+        ),
+        ModuleDefinition(
+            id = "about",
+            title = "Acerca de",
+            summary = "Información de la app, autor y repositorio.",
+            destinationId = R.id.aboutFragment,
+            iconRes = R.drawable.ic_module_about
         )
     )
 }

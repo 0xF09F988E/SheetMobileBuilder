@@ -105,7 +105,7 @@ class RecordCreateViewModel(
         }
     }
 
-    fun save(updates: Map<Long, String>) {
+    fun save(updates: Map<Long, String>, locationMeta: ActionLocationMeta? = null) {
         val state = _uiState.value
         val collection = state.selectedCollection ?: return
         val fields = state.fieldDefinitions
@@ -119,7 +119,7 @@ class RecordCreateViewModel(
                         errorMessage = null
                     )
                 }
-                repository.createRecord(collection.id, fields, updates)
+                repository.createRecord(collection.id, fields, updates, locationMeta)
                 val savedLabel = buildSavedRecordLabel(fields, updates)
                 _uiState.update {
                     it.copy(

@@ -67,6 +67,57 @@
                     android:background="@drawable/app_surface_card_background"
                     android:padding="12dp"
                     android:text="@string/export_format_value" />
+
+                <TextView
+                    style="@style/TextAppearance.PatriGO.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/export_delimiter_label" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.PatriGO.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="@string/export_delimiter_label"
+                    app:endIconMode="dropdown_menu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/exportDelimiterSelector"
+                        style="@style/Widget.PatriGO.TextInputEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/exportDelimiterSummaryText"
+                    style="@style/TextAppearance.PatriGO.Body.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/export_delimiter_empty_summary" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/exportCustomDelimiterLayout"
+                    style="@style/Widget.PatriGO.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:hint="@string/export_custom_delimiter_label"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/exportCustomDelimiterInput"
+                        style="@style/Widget.PatriGO.TextInputEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textNoSuggestions"
+                        android:maxLength="3"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
             <LinearLayout

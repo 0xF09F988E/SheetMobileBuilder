@@ -15,6 +15,10 @@ class ExportRepository(
     private val exportService: ExportService
 ) {
 
+    fun delimiterRequiredMessage(): String {
+        return appContext.getString(R.string.export_error_delimiter_required)
+    }
+
     suspend fun loadMasterCollection(): CollectionOption? = withContext(Dispatchers.IO) {
         databaseHelper.listMasterCollectionOptions().firstOrNull()
     }
@@ -33,6 +37,28 @@ class ExportRepository(
         }
     }
 
+    suspend fun loadDelimiterOptions(): List<ExportDelimiterOption> = withContext(Dispatchers.Default) {
+        ExportDelimiter.values().map { delimiter ->
+            val titleRes = when (delimiter) {
+                ExportDelimiter.COMMA -> R.string.export_delimiter_comma_title
+                ExportDelimiter.SEMICOLON -> R.string.export_delimiter_semicolon_title
+                ExportDelimiter.PIPE -> R.string.export_delimiter_pipe_title
+                ExportDelimiter.CUSTOM -> R.string.export_delimiter_custom_title
+            }
+            val summaryRes = when (delimiter) {
+                ExportDelimiter.COMMA -> R.string.export_delimiter_comma_summary
+                ExportDelimiter.SEMICOLON -> R.string.export_delimiter_semicolon_summary
+                ExportDelimiter.PIPE -> R.string.export_delimiter_pipe_summary
+                ExportDelimiter.CUSTOM -> R.string.export_delimiter_custom_summary
+            }
+            ExportDelimiterOption(
+                delimiter = delimiter,
+                title = appContext.getString(titleRes),
+                summary = appContext.getString(summaryRes)
+            )
+        }
+    }
+
     suspend fun countRecords(collectionId: Long, criterion: ExportCriterion): Int = withContext(Dispatchers.IO) {
         databaseHelper.countRecordsForExport(collectionId, criterion)
     }
@@ -42,6 +68,7 @@ class ExportRepository(
         collection: CollectionOption,
         fields: List<FieldDefinition>,
         criterion: ExportCriterion,
+        delimiter: String,
         onProgress: (processedRows: Int, totalRows: Int, elapsedMs: Long) -> Unit
     ): ExportExecutionResult = withContext(Dispatchers.IO) {
         val context = currentCoroutineContext()
@@ -52,6 +79,7 @@ class ExportRepository(
                 collection = collection,
                 fields = fields,
                 criterion = criterion,
+                delimiter = delimiter,
                 onProgress = onProgress,
                 onCancellationCheck = { context.ensureActive() }
             )
@@ -62,6 +90,7 @@ class ExportRepository(
         collection: CollectionOption,
         fields: List<FieldDefinition>,
         criterion: ExportCriterion,
+        delimiter: String,
         onProgress: (processedRows: Int, totalRows: Int, elapsedMs: Long) -> Unit
     ): Pair<ExportExecutionResult, ShareExportArtifact> = withContext(Dispatchers.IO) {
         val context = currentCoroutineContext()
@@ -76,6 +105,7 @@ class ExportRepository(
                 collection = collection,
                 fields = fields,
                 criterion = criterion,
+                delimiter = delimiter,
                 onProgress = onProgress,
                 onCancellationCheck = { context.ensureActive() }
             )

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/fieldCardRoot"
     style="@style/Widget.PatriGO.Surface.Card"
     android:layout_width="match_parent"
@@ -28,7 +29,7 @@
             android:background="@android:color/transparent"
             android:contentDescription="@string/schema_edit_column_button"
             android:padding="8dp"
-            android:src="@android:drawable/ic_menu_edit"
+            android:src="@drawable/ic_edit"
             android:tint="@color/forest" />
 
         <ImageButton
@@ -38,7 +39,7 @@
             android:background="@android:color/transparent"
             android:contentDescription="@string/schema_delete_column_button"
             android:padding="8dp"
-            android:src="@android:drawable/ic_menu_delete"
+            android:src="@drawable/ic_delete"
             android:tint="@color/amber" />
     </LinearLayout>
 
@@ -49,19 +50,21 @@
         android:layout_marginTop="6dp"
         style="@style/TextAppearance.PatriGO.Caption" />
 
-    <LinearLayout
+    <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/fieldCardBadgesRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        app:flexWrap="wrap"
+        app:alignItems="center">
 
         <TextView
             android:id="@+id/fieldCardTypeBadgeText"
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag" />
 
         <TextView
@@ -69,7 +72,8 @@
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag"
             android:visibility="gone" />
 
@@ -78,7 +82,8 @@
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag"
             android:visibility="gone" />
 
@@ -87,7 +92,8 @@
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag"
             android:visibility="gone" />
 
@@ -96,7 +102,8 @@
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag"
             android:visibility="gone" />
 
@@ -105,8 +112,9 @@
             style="@style/Widget.PatriGO.Tag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
             android:textAppearance="@style/TextAppearance.PatriGO.Tag"
             android:visibility="gone" />
-    </LinearLayout>
+    </com.google.android.flexbox.FlexboxLayout>
 </LinearLayout>

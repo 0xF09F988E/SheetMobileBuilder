@@ -1,7 +1,10 @@
 package com.pwa.offline
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,16 +17,23 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
 class RecordCreateFragment : Fragment() {
+
+    private sealed interface PendingAction {
+        data class Save(val updates: Map<Long, String>) : PendingAction
+    }
 
     private val viewModel: RecordCreateViewModel by viewModels {
         RecordCreateViewModelFactory(
@@ -42,6 +52,21 @@ class RecordCreateFragment : Fragment() {
     private lateinit var fieldsEmptyText: TextView
     private lateinit var fieldAdapter: AssetFieldAdapter
     private var renderedFormVersion: Long = -1L
+    private var pendingAction: PendingAction? = null
+    private val locationPermissions = arrayOf(
+        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+        android.Manifest.permission.ACCESS_FINE_LOCATION
+    )
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            val action = pendingAction ?: return@registerForActivityResult
+            pendingAction = null
+            if (grants.values.any { it }) {
+                performPendingActionWithLocation(action)
+            } else {
+                performPendingAction(action, null)
+            }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -80,7 +105,7 @@ class RecordCreateFragment : Fragment() {
 
         saveButton.setOnClickListener {
             hideKeyboard()
-            viewModel.save(fieldAdapter.buildUpdates())
+            requestActionWithLocation(PendingAction.Save(fieldAdapter.buildUpdates()))
         }
 
         clearButton.setOnClickListener {
@@ -144,12 +169,12 @@ class RecordCreateFragment : Fragment() {
     }
 
     private fun applyKeyboardInsets() {
-        val baseListBottom = fieldsRecyclerView.paddingBottom
+        val baseRootBottom = rootView.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, windowInsets ->
             val imeBottom = windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             val systemBottom = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             val extraBottom = (imeBottom - systemBottom).coerceAtLeast(0)
-            fieldsRecyclerView.updatePadding(bottom = baseListBottom + extraBottom)
+            rootView.updatePadding(bottom = baseRootBottom + extraBottom)
             windowInsets
         }
         ViewCompat.requestApplyInsets(rootView)
@@ -174,5 +199,75 @@ class RecordCreateFragment : Fragment() {
             return
         }
         viewModel.requestOptionSuggestions(sourceCollectionId, query, onResult)
+    }
+
+    private fun requestActionWithLocation(action: PendingAction) {
+        if (hasAnyLocationPermission()) {
+            if (!ActionLocationCapture.isLocationServiceEnabled(requireContext().applicationContext)) {
+                showLocationServicePrompt(action)
+                return
+            }
+            performPendingActionWithLocation(action)
+            return
+        }
+        pendingAction = action
+        showLocationPermissionPrompt()
+    }
+
+    private fun performPendingActionWithLocation(action: PendingAction) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val locationMeta = runCatching {
+                ActionLocationCapture.captureBestEffort(requireContext().applicationContext)
+            }.getOrNull()
+            performPendingAction(action, locationMeta)
+        }
+    }
+
+    private fun performPendingAction(action: PendingAction, locationMeta: ActionLocationMeta?) {
+        when (action) {
+            is PendingAction.Save -> viewModel.save(action.updates, locationMeta)
+        }
+    }
+
+    private fun hasAnyLocationPermission(): Boolean {
+        return locationPermissions.any { permission ->
+            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun showLocationPermissionPrompt() {
+        val action = pendingAction ?: return
+        val shouldExplain = locationPermissions.any(::shouldShowRequestPermissionRationale)
+        val messageRes = if (shouldExplain) {
+            R.string.location_permission_rationale
+        } else {
+            R.string.location_permission_request_message
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.location_permission_request_title)
+            .setMessage(messageRes)
+            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
+                pendingAction = null
+                performPendingAction(action, null)
+            }
+            .setPositiveButton(R.string.location_permission_continue) { _, _ ->
+                locationPermissionLauncher.launch(locationPermissions)
+            }
+            .show()
+    }
+
+    private fun showLocationServicePrompt(action: PendingAction) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.location_service_request_title)
+            .setMessage(R.string.location_service_request_message)
+            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
+                pendingAction = null
+                performPendingAction(action, null)
+            }
+            .setPositiveButton(R.string.location_service_open_settings) { _, _ ->
+                pendingAction = null
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            .show()
     }
 }

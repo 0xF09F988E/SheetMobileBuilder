@@ -23,6 +23,9 @@ data class ExportUiState(
     val fieldDefinitions: List<FieldDefinition> = emptyList(),
     val criterionOptions: List<ExportCriterionOption> = emptyList(),
     val selectedCriterionOption: ExportCriterionOption? = null,
+    val delimiterOptions: List<ExportDelimiterOption> = emptyList(),
+    val selectedDelimiterOption: ExportDelimiterOption? = null,
+    val customDelimiterValue: String = "",
     val exportableRecordCount: Int = 0,
     val progress: ExportProgressState = ExportProgressState(),
     val lastResult: ExportExecutionResult? = null,
@@ -38,13 +41,29 @@ data class ExportUiState(
         get() = phase == ExportUiPhase.COUNTING
 
     val isReady: Boolean
-        get() = masterCollection != null && fieldDefinitions.isNotEmpty() && selectedCriterionOption != null
+        get() = masterCollection != null &&
+            fieldDefinitions.isNotEmpty() &&
+            selectedCriterionOption != null &&
+            resolvedDelimiter != null
 
     val suggestedFileName: String
         get() {
             val collection = masterCollection ?: return "export.csv"
             val criterion = selectedCriterionOption?.criterion ?: ExportCriterion.default()
             return ExportConfig.buildFileName(collection, criterion)
+        }
+
+    val requiresCustomDelimiter: Boolean
+        get() = selectedDelimiterOption?.delimiter == ExportDelimiter.CUSTOM
+
+    val resolvedDelimiter: String?
+        get() {
+            val option = selectedDelimiterOption ?: return null
+            return if (option.delimiter == ExportDelimiter.CUSTOM) {
+                customDelimiterValue.takeIf { it.isNotBlank() }
+            } else {
+                option.delimiter.delimiter
+            }
         }
 }
 
@@ -65,6 +84,9 @@ class ExportViewModel(
                 val master = repository.loadMasterCollection()
                 val criteria = repository.loadCriterionOptions()
                 val selectedCriterion = criteria.firstOrNull()
+                val delimiters = repository.loadDelimiterOptions()
+                val selectedDelimiter = delimiters.firstOrNull { it.delimiter == ExportDelimiter.default() }
+                    ?: delimiters.firstOrNull()
                 val fields = master?.let { repository.loadFieldDefinitions(it.id) }.orEmpty()
                 val exportableCount = if (master != null && selectedCriterion != null) {
                     repository.countRecords(master.id, selectedCriterion.criterion)
@@ -76,6 +98,8 @@ class ExportViewModel(
                     fieldDefinitions = fields,
                     criterionOptions = criteria,
                     selectedCriterionOption = selectedCriterion,
+                    delimiterOptions = delimiters,
+                    selectedDelimiterOption = selectedDelimiter,
                     exportableRecordCount = exportableCount
                 )
             } catch (cancelled: CancellationException) {
@@ -125,10 +149,37 @@ class ExportViewModel(
         }
     }
 
+    fun selectDelimiter(option: ExportDelimiterOption?) {
+        val selected = option ?: return
+        _uiState.update {
+            it.copy(
+                selectedDelimiterOption = selected,
+                customDelimiterValue = if (selected.delimiter == ExportDelimiter.CUSTOM) it.customDelimiterValue else "",
+                errorMessage = null,
+                lastResult = null,
+                pendingShareArtifact = null,
+                cancelledByExit = false
+            )
+        }
+    }
+
+    fun updateCustomDelimiter(rawValue: String) {
+        _uiState.update {
+            it.copy(
+                customDelimiterValue = rawValue.take(3),
+                errorMessage = null
+            )
+        }
+    }
+
     fun exportToUri(uri: Uri) {
         val state = _uiState.value
         val master = state.masterCollection ?: return
         val criterion = state.selectedCriterionOption?.criterion ?: return
+        val delimiter = state.resolvedDelimiter ?: run {
+            _uiState.update { it.copy(errorMessage = repository.delimiterRequiredMessage()) }
+            return
+        }
         val fields = state.fieldDefinitions
         if (fields.isEmpty()) return
 
@@ -138,6 +189,7 @@ class ExportViewModel(
                 collection = master,
                 fields = fields,
                 criterion = criterion,
+                delimiter = delimiter,
                 onProgress = ::updateProgress
             )
         }
@@ -147,6 +199,10 @@ class ExportViewModel(
         val state = _uiState.value
         val master = state.masterCollection ?: return
         val criterion = state.selectedCriterionOption?.criterion ?: return
+        val delimiter = state.resolvedDelimiter ?: run {
+            _uiState.update { it.copy(errorMessage = repository.delimiterRequiredMessage()) }
+            return
+        }
         val fields = state.fieldDefinitions
         if (fields.isEmpty()) return
 
@@ -155,6 +211,7 @@ class ExportViewModel(
                 collection = master,
                 fields = fields,
                 criterion = criterion,
+                delimiter = delimiter,
                 onProgress = ::updateProgress
             )
             _uiState.update { current ->

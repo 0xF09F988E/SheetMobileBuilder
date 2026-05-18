@@ -123,7 +123,7 @@
 
         <Button
             android:id="@+id/confirmAssetButton"
-            style="@style/Widget.PatriGO.Button.Xs"
+            style="@style/Widget.PatriGO.Button.Md"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
@@ -134,7 +134,7 @@
 
         <Button
             android:id="@+id/editAssetButton"
-            style="@style/Widget.PatriGO.Button.Xs"
+            style="@style/Widget.PatriGO.Button.Md"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
