@@ -137,6 +137,54 @@
         <item name="android:paddingBottom">6dp</item>
     </style>
 
+    <style name="Widget.PatriGO.Button.Danger.Base" parent="Widget.PatriGO.Button.Base">
+        <item name="backgroundTint">@color/error</item>
+        <item name="strokeColor">@color/error</item>
+        <item name="android:textColor">@color/paper</item>
+    </style>
+
+    <style name="Widget.PatriGO.Button.Danger.Md" parent="Widget.PatriGO.Button.Danger.Base">
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="Widget.PatriGO.Button.Danger.Xs" parent="Widget.PatriGO.Button.Danger.Base">
+        <item name="android:minHeight">34dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+
+    <style name="Widget.PatriGO.Button.Success.Base" parent="Widget.PatriGO.Button.Base">
+        <item name="backgroundTint">@color/success</item>
+        <item name="strokeColor">@color/success</item>
+        <item name="android:textColor">@color/paper</item>
+    </style>
+
+    <style name="Widget.PatriGO.Button.Success.Md" parent="Widget.PatriGO.Button.Success.Base">
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="Widget.PatriGO.Button.Success.Xs" parent="Widget.PatriGO.Button.Success.Base">
+        <item name="android:minHeight">34dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+
     <style name="Widget.PatriGO.Surface.Panel" parent="">
         <item name="android:background">@drawable/app_surface_panel_background</item>
         <item name="android:padding">12dp</item>

@@ -34,19 +34,17 @@ class AssetQueryRepository(
         recordId: Long,
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>,
-        locationMeta: ActionLocationMeta? = null
+        updates: Map<Long, String>
     ): AssetRecordDetail? = withContext(Dispatchers.IO) {
-        databaseHelper.updateRecordValues(recordId, collectionId, fields, updates, locationMeta)
+        databaseHelper.updateRecordValues(recordId, collectionId, fields, updates)
         databaseHelper.getRecordDetail(collectionId, recordId)
     }
 
     suspend fun markConforme(
         recordId: Long,
-        collectionId: Long,
-        locationMeta: ActionLocationMeta? = null
+        collectionId: Long
     ): AssetRecordDetail? = withContext(Dispatchers.IO) {
-        databaseHelper.markRecordAsConforme(recordId, collectionId, locationMeta)
+        databaseHelper.markRecordAsConforme(recordId, collectionId)
         databaseHelper.getRecordDetail(collectionId, recordId)
     }
 

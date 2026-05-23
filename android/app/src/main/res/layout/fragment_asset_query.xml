@@ -26,6 +26,7 @@
                 style="@style/Widget.PatriGO.TextInputEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:imeOptions="actionSearch"
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -46,6 +47,7 @@
 
             <Button
                 android:id="@+id/clearSearchButton"
+                style="@style/Widget.PatriGO.Button.Danger.Md"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
@@ -55,21 +57,46 @@
         </LinearLayout>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/recordMetaText"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="@string/asset_record_meta_empty"
-        style="@style/TextAppearance.PatriGO.Caption" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/recordMetaText"
+            style="@style/TextAppearance.PatriGO.Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/asset_record_meta_empty" />
+
+        <TextView
+            android:id="@+id/assetReviewStateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/app_tag_background"
+            android:paddingLeft="8dp"
+            android:paddingTop="4dp"
+            android:paddingRight="8dp"
+            android:paddingBottom="4dp"
+            android:text="@string/asset_review_state_empty"
+            android:textColor="@color/forest_dark"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <TextView
-        android:id="@+id/assetReviewStateText"
+        android:id="@+id/assetChangedFieldsText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="@string/asset_review_state_empty"
-        style="@style/TextAppearance.PatriGO.Body" />
+        android:text="@string/asset_status_empty"
+        android:visibility="gone"
+        style="@style/TextAppearance.PatriGO.Body.Muted" />
 
     <TextView
         android:id="@+id/assetStatusText"
@@ -78,33 +105,6 @@
         android:layout_marginTop="4dp"
         android:text="@string/asset_status_empty"
         style="@style/TextAppearance.PatriGO.Body.Muted" />
-
-    <LinearLayout
-        android:id="@+id/assetAdditionalFieldsBar"
-        style="@style/Widget.PatriGO.Surface.Card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/assetAdditionalFieldsText"
-            style="@style/TextAppearance.PatriGO.Body.Muted"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/asset_additional_fields_hidden" />
-
-        <Button
-            android:id="@+id/assetToggleAdditionalFieldsButton"
-            style="@style/Widget.PatriGO.Button.Xs"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:text="@string/asset_show_additional_fields" />
-    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/assetFieldsRecyclerView"
@@ -119,58 +119,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <Button
             android:id="@+id/confirmAssetButton"
-            style="@style/Widget.PatriGO.Button.Md"
-            android:layout_width="0dp"
+            style="@style/Widget.PatriGO.Button.Success.Md"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
             android:enabled="false"
             android:text="@string/asset_confirm_button"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/editAssetButton"
-            style="@style/Widget.PatriGO.Button.Md"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:enabled="false"
-            android:text="@string/asset_edit_button"
-            android:textAllCaps="false" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/editActionsContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <Button
-            android:id="@+id/cancelAssetEditButton"
-            style="@style/Widget.PatriGO.Button.Xs"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="@string/asset_cancel_edit_button"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/saveAssetChangesButton"
-            style="@style/Widget.PatriGO.Button.Xs"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:enabled="false"
-            android:text="@string/asset_save_button"
             android:textAllCaps="false" />
     </LinearLayout>
 </LinearLayout>

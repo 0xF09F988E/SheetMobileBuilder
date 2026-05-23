@@ -44,7 +44,7 @@ class RecordCreateViewModel(
         viewModelScope.launch {
             try {
                 val collections = repository.loadCollections()
-                val selected = collections.firstOrNull()
+                val selected = collections.firstOrNull { it.isMaster } ?: collections.firstOrNull()
                 val fields = selected?.let { repository.loadFieldDefinitions(it.id) }.orEmpty()
                 _uiState.value = RecordCreateUiState(
                     collectionOptions = collections,
@@ -105,8 +105,9 @@ class RecordCreateViewModel(
         }
     }
 
-    fun save(updates: Map<Long, String>, locationMeta: ActionLocationMeta? = null) {
+    fun save(updates: Map<Long, String>) {
         val state = _uiState.value
+        if (state.isBusy) return
         val collection = state.selectedCollection ?: return
         val fields = state.fieldDefinitions
         viewModelScope.launch {
@@ -119,7 +120,7 @@ class RecordCreateViewModel(
                         errorMessage = null
                     )
                 }
-                repository.createRecord(collection.id, fields, updates, locationMeta)
+                repository.createRecord(collection.id, fields, updates)
                 val savedLabel = buildSavedRecordLabel(fields, updates)
                 _uiState.update {
                     it.copy(

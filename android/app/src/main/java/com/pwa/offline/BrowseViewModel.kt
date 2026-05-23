@@ -17,7 +17,9 @@ data class BrowseUiState(
     val totalRecords: Int = 0,
     val records: List<RecordPreview> = emptyList(),
     val isLoading: Boolean = false,
-    val hasMasterTable: Boolean = true
+    val hasMasterTable: Boolean = true,
+    val actionMessage: String? = null,
+    val actionMessageNonce: Long = 0L
 ) {
     val totalPages: Int
         get() = if (totalRecords == 0) 0 else ((totalRecords - 1) / PAGE_SIZE) + 1
@@ -85,6 +87,41 @@ class BrowseViewModel(
         } else {
             loadPage(master, state.currentPage)
         }
+    }
+
+    fun deleteRecord(record: RecordPreview) {
+        val state = _uiState.value
+        val master = state.masterCollection ?: return
+        if (state.isLoading) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                repository.deleteRecord(record.recordId)
+                val totalRecords = repository.countRecords(master.id)
+                val maxPage = if (totalRecords == 0) 0 else ((totalRecords - 1) / BrowseUiState.PAGE_SIZE)
+                val targetPage = state.currentPage.coerceAtMost(maxPage)
+                val records = repository.loadPage(master.id, targetPage, BrowseUiState.PAGE_SIZE)
+                _uiState.update {
+                    it.copy(
+                        masterCollection = master,
+                        currentPage = targetPage,
+                        totalRecords = totalRecords,
+                        records = records,
+                        hasMasterTable = true,
+                        isLoading = false,
+                        actionMessage = record.title.ifBlank { "Registro" },
+                        actionMessageNonce = it.actionMessageNonce + 1L
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            }
+        }
+    }
+
+    fun clearActionMessage() {
+        _uiState.update { it.copy(actionMessage = null) }
     }
 
     private fun loadPage(master: CollectionOption, page: Int) {

@@ -18,6 +18,13 @@ object ModuleRegistry {
             iconRes = R.drawable.ic_module_home
         ),
         ModuleDefinition(
+            id = "dashboard",
+            title = "Dashboard",
+            summary = "Resumen rapido por estado de revision y conteos agrupados por una columna.",
+            destinationId = R.id.dashboardFragment,
+            iconRes = R.drawable.ic_module_dashboard
+        ),
+        ModuleDefinition(
             id = "asset_query",
             title = "Consulta",
             summary = "Buscar registros, revisar su información y actualizar sus datos.",

@@ -5,12 +5,11 @@
     android:layout_height="match_parent"
     android:background="@color/paper">
 
-    <ScrollView
-        android:id="@+id/schemaScrollView"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:fillViewport="true">
+        android:fillViewport="false"
+        android:overScrollMode="ifContentScrolls">
 
         <LinearLayout
             android:id="@+id/schemaContentContainer"
@@ -47,6 +46,41 @@
                         android:layout_height="wrap_content"
                         android:text="@string/count_loading" />
                 </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/reloadButton"
+                        style="@style/Widget.PatriGO.Button.Xs"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/button_reload"
+                        android:textAllCaps="false" />
+
+                    <Button
+                        android:id="@+id/deleteAllButton"
+                        style="@style/Widget.PatriGO.Button.Xs"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/button_delete_all"
+                        android:textAllCaps="false" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/statusText"
+                    style="@style/TextAppearance.PatriGO.Body.Muted"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/status_booting" />
             </LinearLayout>
 
             <com.google.android.material.tabs.TabLayout
@@ -60,406 +94,378 @@
                 app:tabMode="fixed"
                 app:tabRippleColor="@android:color/transparent" />
 
-            <LinearLayout
-                android:id="@+id/schemaTablesTabContent"
+            <FrameLayout
+                android:id="@+id/schemaTabHost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
+                android:layout_marginTop="12dp">
 
                 <LinearLayout
-                    style="@style/Widget.PatriGO.Surface.Panel"
+                    android:id="@+id/schemaTablesTabContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:visibility="visible">
 
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.SectionTitle"
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Panel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/schema_create_table_title" />
+                        android:orientation="vertical">
 
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/schema_create_table_summary" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/hint_collection_name">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/collectionNameInput"
-                            style="@style/Widget.PatriGO.TextInputEditText"
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.SectionTitle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textCapWords"
-                            android:maxLines="1" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:text="@string/schema_create_table_title" />
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/hint_collection_description">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/collectionDescriptionInput"
-                            style="@style/Widget.PatriGO.TextInputEditText"
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:gravity="top|start"
-                            android:inputType="textCapSentences|textMultiLine"
-                            android:maxLines="3"
-                            android:minLines="2" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginTop="4dp"
+                            android:text="@string/schema_create_table_summary" />
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/collectionMasterSwitch"
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/hint_collection_name">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/collectionNameInput"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textCapWords"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/hint_collection_description">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/collectionDescriptionInput"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="top|start"
+                                android:inputType="textCapSentences|textMultiLine"
+                                android:maxLines="3"
+                                android:minLines="2" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/collectionMasterSwitch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/collection_master_switch_label" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/collectionOptionsSwitch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/collection_options_switch_label" />
+
+                        <Button
+                            android:id="@+id/createCollectionButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/button_create_collection"
+                            android:textAllCaps="false" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Panel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/collection_master_switch_label" />
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/collectionOptionsSwitch"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/collection_options_switch_label" />
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.SectionTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/schema_tables_title" />
 
-                    <Button
-                        android:id="@+id/createCollectionButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/button_create_collection"
-                        android:textAllCaps="false" />
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/schema_tables_summary" />
+
+                        <TextView
+                            android:id="@+id/collectionsEmptyText"
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/schema_tables_empty"
+                            android:visibility="gone" />
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/collectionsRecyclerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:clipToPadding="false"
+                            android:nestedScrollingEnabled="false" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
-                    style="@style/Widget.PatriGO.Surface.Panel"
+                    android:id="@+id/schemaFieldsTabContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.SectionTitle"
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Panel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/schema_tables_title" />
+                        android:orientation="vertical">
 
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.SectionTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/schema_create_field_title" />
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/schema_create_field_summary" />
+
+                        <TextView
+                            android:id="@+id/selectedTableHintText"
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/schema_selected_table_empty_short" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/schema_collection_selector_hint"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/collectionSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/hint_field_name">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/fieldNameInput"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textCapWords"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/schema_field_type_selector_hint"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/fieldTypeSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/fieldOptionSourceLayout"
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/schema_options_source_selector_hint"
+                            android:visibility="gone"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/fieldOptionSourceSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/fieldOptionDisplayRoleLayout"
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="@string/schema_option_display_role_selector_hint"
+                            android:visibility="gone"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/fieldOptionDisplayRoleSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Label"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/schema_field_search_group_title" />
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/schema_field_search_group_summary" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:hint="@string/schema_field_search_selector_hint"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/fieldSearchModeSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Label"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/schema_field_value_group_title" />
+
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/schema_field_value_group_summary" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.PatriGO.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:hint="@string/schema_field_value_selector_hint"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/fieldValueRuleSelector"
+                                style="@style/Widget.PatriGO.TextInputEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <Button
+                            android:id="@+id/createFieldButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/button_create_field"
+                            android:textAllCaps="false" />
+
+                        <Button
+                            android:id="@+id/cancelFieldEditButton"
+                            style="@style/Widget.PatriGO.Button.Xs"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/button_cancel_field_edit"
+                            android:textAllCaps="false"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        style="@style/Widget.PatriGO.Surface.Panel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/schema_tables_summary" />
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/collectionsEmptyText"
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/schema_tables_empty"
-                        android:visibility="gone" />
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.SectionTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/schema_fields_title" />
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/collectionsRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:nestedScrollingEnabled="false" />
+                        <TextView
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/schema_fields_summary" />
+
+                        <TextView
+                            android:id="@+id/fieldsEmptyText"
+                            style="@style/TextAppearance.PatriGO.Body.Muted"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/schema_fields_empty"
+                            android:visibility="gone" />
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/fieldsRecyclerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:clipToPadding="false"
+                            android:nestedScrollingEnabled="false" />
+                    </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/schemaFieldsTabContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <LinearLayout
-                    style="@style/Widget.PatriGO.Surface.Panel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.SectionTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/schema_create_field_title" />
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/schema_create_field_summary" />
-
-                    <TextView
-                        android:id="@+id/selectedTableHintText"
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/schema_selected_table_empty_short" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/schema_collection_selector_hint"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/collectionSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/hint_field_name">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/fieldNameInput"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textCapWords"
-                            android:maxLines="1" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/schema_field_type_selector_hint"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/fieldTypeSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/fieldOptionSourceLayout"
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/schema_options_source_selector_hint"
-                        android:visibility="gone"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/fieldOptionSourceSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/fieldOptionDisplayRoleLayout"
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/schema_option_display_role_selector_hint"
-                        android:visibility="gone"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/fieldOptionDisplayRoleSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Label"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/schema_field_search_group_title" />
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/schema_field_search_group_summary" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/schema_field_search_selector_hint"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/fieldSearchModeSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Label"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/schema_field_value_group_title" />
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/schema_field_value_group_summary" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.PatriGO.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/schema_field_value_selector_hint"
-                        app:endIconMode="dropdown_menu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/fieldValueRuleSelector"
-                            style="@style/Widget.PatriGO.TextInputEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <Button
-                        android:id="@+id/createFieldButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/button_create_field"
-                        android:textAllCaps="false" />
-
-                    <Button
-                        android:id="@+id/cancelFieldEditButton"
-                        style="@style/Widget.PatriGO.Button.Xs"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/button_cancel_field_edit"
-                        android:textAllCaps="false"
-                        android:visibility="gone" />
-                </LinearLayout>
-
-                <LinearLayout
-                    style="@style/Widget.PatriGO.Surface.Panel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.SectionTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/schema_fields_title" />
-
-                    <TextView
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/schema_fields_summary" />
-
-                    <TextView
-                        android:id="@+id/fieldsEmptyText"
-                        style="@style/TextAppearance.PatriGO.Body.Muted"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/schema_fields_empty"
-                        android:visibility="gone" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/fieldsRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:nestedScrollingEnabled="false" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/reloadButton"
-                    style="@style/Widget.PatriGO.Button.Xs"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/button_reload"
-                    android:textAllCaps="false" />
-
-                <Button
-                    android:id="@+id/deleteAllButton"
-                    style="@style/Widget.PatriGO.Button.Xs"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/button_delete_all"
-                    android:textAllCaps="false" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/statusText"
-                style="@style/TextAppearance.PatriGO.Body.Muted"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/status_booting" />
+            </FrameLayout>
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
         android:id="@+id/schemaLoadingOverlay"

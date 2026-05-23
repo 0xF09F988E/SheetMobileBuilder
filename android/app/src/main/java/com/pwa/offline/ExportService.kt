@@ -15,11 +15,7 @@ class ExportService(
         "review_status",
         "review_action",
         "reviewed_at",
-        "changed_fields_text",
-        "meta_latitude",
-        "meta_longitude",
-        "meta_location_accuracy_meters",
-        "meta_location_captured_at"
+        "changed_fields_text"
     )
 
     fun exportToCsv(

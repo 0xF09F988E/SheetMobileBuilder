@@ -22,6 +22,10 @@ class BrowseRepository(
         databaseHelper.listRecordPage(collectionId, page, pageSize)
     }
 
+    suspend fun deleteRecord(recordId: Long): Boolean = withContext(Dispatchers.IO) {
+        databaseHelper.deleteRecord(recordId)
+    }
+
     fun close() {
         databaseHelper.close()
     }

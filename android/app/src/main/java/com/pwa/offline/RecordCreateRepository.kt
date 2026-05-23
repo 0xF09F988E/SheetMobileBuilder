@@ -17,10 +17,9 @@ class RecordCreateRepository(
     suspend fun createRecord(
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>,
-        locationMeta: ActionLocationMeta? = null
+        updates: Map<Long, String>
     ): Long = withContext(Dispatchers.IO) {
-        databaseHelper.createRecordValues(collectionId, fields, updates, locationMeta)
+        databaseHelper.createRecordValues(collectionId, fields, updates)
     }
 
     suspend fun searchOptionSuggestions(

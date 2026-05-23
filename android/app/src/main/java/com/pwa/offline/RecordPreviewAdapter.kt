@@ -1,16 +1,21 @@
 package com.pwa.offline
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 
-class RecordPreviewAdapter : RecyclerView.Adapter<RecordPreviewAdapter.RecordViewHolder>() {
+class RecordPreviewAdapter(
+    private val onShareRecord: (RecordPreview) -> Unit,
+    private val onDeleteRecord: (RecordPreview) -> Unit
+) : RecyclerView.Adapter<RecordPreviewAdapter.RecordViewHolder>() {
+
+    companion object {
+        private const val ACTION_SHARE = 1
+        private const val ACTION_DELETE = 2
+    }
 
     private val items = mutableListOf<RecordPreview>()
 
@@ -23,7 +28,7 @@ class RecordPreviewAdapter : RecyclerView.Adapter<RecordPreviewAdapter.RecordVie
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecordViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_record_preview, parent, false)
-        return RecordViewHolder(view)
+        return RecordViewHolder(view, onShareRecord, onDeleteRecord)
     }
 
     override fun onBindViewHolder(holder: RecordViewHolder, position: Int) {
@@ -32,11 +37,15 @@ class RecordPreviewAdapter : RecyclerView.Adapter<RecordPreviewAdapter.RecordVie
 
     override fun getItemCount(): Int = items.size
 
-    class RecordViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class RecordViewHolder(
+        itemView: View,
+        private val onShareRecord: (RecordPreview) -> Unit,
+        private val onDeleteRecord: (RecordPreview) -> Unit
+    ) : RecyclerView.ViewHolder(itemView) {
         private val titleText: TextView = itemView.findViewById(R.id.recordTitleText)
         private val bodyText: TextView = itemView.findViewById(R.id.recordBodyText)
         private val updatedAtText: TextView = itemView.findViewById(R.id.recordUpdatedAtText)
-        private val copyButton: TextView = itemView.findViewById(R.id.recordCopyButton)
+        private val actionButton: TextView = itemView.findViewById(R.id.recordActionButton)
 
         fun bind(record: RecordPreview) {
             titleText.text = record.title.ifBlank {
@@ -61,21 +70,24 @@ class RecordPreviewAdapter : RecyclerView.Adapter<RecordPreviewAdapter.RecordVie
                 }
             }
             bodyText.text = body
-            copyButton.setOnClickListener {
-                val clipboard = itemView.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val payload = buildString {
-                    append(titleText.text)
-                    if (body.isNotBlank()) {
-                        appendLine()
-                        append(body)
+            actionButton.setOnClickListener { anchor ->
+                PopupMenu(anchor.context, anchor).apply {
+                    menu.add(0, ACTION_SHARE, 0, R.string.browse_action_share)
+                    menu.add(0, ACTION_DELETE, 1, R.string.browse_action_delete)
+                    setOnMenuItemClickListener { menuItem ->
+                        when (menuItem.itemId) {
+                            ACTION_SHARE -> {
+                                onShareRecord(record)
+                                true
+                            }
+                            ACTION_DELETE -> {
+                                onDeleteRecord(record)
+                                true
+                            }
+                            else -> false
+                        }
                     }
-                }
-                clipboard.setPrimaryClip(ClipData.newPlainText(titleText.text, payload))
-                Toast.makeText(
-                    itemView.context,
-                    R.string.browse_copy_done,
-                    Toast.LENGTH_SHORT
-                ).show()
+                }.show()
             }
         }
     }

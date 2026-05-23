@@ -10,6 +10,11 @@
         android:label="@string/home_title" />
 
     <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.pwa.offline.DashboardFragment"
+        android:label="@string/dashboard_title" />
+
+    <fragment
         android:id="@+id/schemaFragment"
         android:name="com.pwa.offline.SchemaFragment"
         android:label="@string/schema_title" />

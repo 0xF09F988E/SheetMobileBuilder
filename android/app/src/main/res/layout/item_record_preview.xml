@@ -22,7 +22,7 @@
             style="@style/TextAppearance.PatriGO.SectionTitle" />
 
         <TextView
-            android:id="@+id/recordCopyButton"
+            android:id="@+id/recordActionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -33,7 +33,7 @@
             android:paddingTop="6dp"
             android:paddingRight="10dp"
             android:paddingBottom="6dp"
-            android:text="@string/browse_copy"
+            android:text="@string/browse_actions"
             android:textColor="@color/forest_dark"
             android:textStyle="bold" />
     </LinearLayout>

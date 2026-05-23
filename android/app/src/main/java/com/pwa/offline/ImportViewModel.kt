@@ -33,7 +33,8 @@ data class ImportUiState(
     val progress: ImportProgressState = ImportProgressState(),
     val phase: ImportUiPhase = ImportUiPhase.IDLE,
     val errorMessage: String? = null,
-    val cancelledByExit: Boolean = false
+    val cancelledByExit: Boolean = false,
+    val cancelledManually: Boolean = false
 ) {
     val isBusy: Boolean
         get() = phase != ImportUiPhase.IDLE
@@ -74,7 +75,8 @@ class ImportViewModel(
                 importResult = null,
                 progress = ImportProgressState(),
                 errorMessage = null,
-                cancelledByExit = false
+                cancelledByExit = false,
+                cancelledManually = false
             )
         }
     }
@@ -92,7 +94,8 @@ class ImportViewModel(
                     validationResult = null,
                     importResult = null,
                     progress = ImportProgressState(),
-                    errorMessage = null
+                    errorMessage = null,
+                    cancelledManually = false
                 )
             }
         }
@@ -105,7 +108,8 @@ class ImportViewModel(
                 validationResult = null,
                 importResult = null,
                 progress = ImportProgressState(),
-                errorMessage = null
+                errorMessage = null,
+                cancelledManually = false
             )
         }
     }
@@ -117,7 +121,8 @@ class ImportViewModel(
                 validationResult = null,
                 importResult = null,
                 progress = ImportProgressState(),
-                errorMessage = null
+                errorMessage = null,
+                cancelledManually = false
             )
         }
     }
@@ -130,7 +135,8 @@ class ImportViewModel(
                     workbookSheets = inspection.sheets,
                     selectedSheet = inspection.sheets.firstOrNull(),
                     errorMessage = null,
-                    cancelledByExit = false
+                    cancelledByExit = false,
+                    cancelledManually = false
                 )
             }
         }
@@ -155,7 +161,8 @@ class ImportViewModel(
                     importResult = null,
                     progress = ImportProgressState(),
                     errorMessage = null,
-                    cancelledByExit = false
+                    cancelledByExit = false,
+                    cancelledManually = false
                 )
             }
         }
@@ -203,7 +210,8 @@ class ImportViewModel(
                         )
                     ),
                     errorMessage = null,
-                    cancelledByExit = false
+                    cancelledByExit = false,
+                    cancelledManually = false
                 )
             }
         }
@@ -220,7 +228,8 @@ class ImportViewModel(
                     importResult = null,
                     progress = ImportProgressState(),
                     errorMessage = null,
-                    cancelledByExit = false
+                    cancelledByExit = false,
+                    cancelledManually = false
                 )
             }
         }
@@ -228,7 +237,12 @@ class ImportViewModel(
 
     fun cancelImport(cancelledByExit: Boolean = false) {
         if (_uiState.value.phase != ImportUiPhase.IMPORTING) return
-        _uiState.update { it.copy(cancelledByExit = cancelledByExit) }
+        _uiState.update {
+            it.copy(
+                cancelledByExit = cancelledByExit,
+                cancelledManually = !cancelledByExit
+            )
+        }
         currentJob?.cancel()
     }
 
@@ -242,7 +256,8 @@ class ImportViewModel(
                 it.copy(
                     phase = phase,
                     errorMessage = null,
-                    cancelledByExit = false
+                    cancelledByExit = false,
+                    cancelledManually = false
                 )
             }
             try {

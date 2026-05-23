@@ -10,7 +10,6 @@ import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.ViewCompat
@@ -19,6 +18,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
@@ -38,11 +38,10 @@ class SchemaFragment : Fragment() {
     private lateinit var statusText: TextView
     private lateinit var schemaLoadingOverlay: View
     private lateinit var schemaLoadingText: TextView
-    private lateinit var schemaScrollView: ScrollView
     private lateinit var schemaContentContainer: LinearLayout
     private lateinit var schemaTabLayout: TabLayout
-    private lateinit var schemaTablesTabContent: LinearLayout
-    private lateinit var schemaFieldsTabContent: LinearLayout
+    private lateinit var schemaTablesTabContent: View
+    private lateinit var schemaFieldsTabContent: View
     private lateinit var collectionsRecyclerView: RecyclerView
     private lateinit var fieldsRecyclerView: RecyclerView
     private lateinit var collectionsEmptyText: TextView
@@ -106,7 +105,6 @@ class SchemaFragment : Fragment() {
         statusText = view.findViewById(R.id.statusText)
         schemaLoadingOverlay = view.findViewById(R.id.schemaLoadingOverlay)
         schemaLoadingText = view.findViewById(R.id.schemaLoadingText)
-        schemaScrollView = view.findViewById(R.id.schemaScrollView)
         schemaContentContainer = view.findViewById(R.id.schemaContentContainer)
         schemaTabLayout = view.findViewById(R.id.schemaTabLayout)
         schemaTablesTabContent = view.findViewById(R.id.schemaTablesTabContent)
@@ -149,8 +147,10 @@ class SchemaFragment : Fragment() {
         )
         collectionsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         collectionsRecyclerView.adapter = collectionCardAdapter
+        collectionsRecyclerView.isNestedScrollingEnabled = false
         fieldsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         fieldsRecyclerView.adapter = fieldCardAdapter
+        fieldsRecyclerView.isNestedScrollingEnabled = false
     }
 
     private fun configureFieldTypes() {
@@ -267,7 +267,6 @@ class SchemaFragment : Fragment() {
         if (!showTables) {
             loadFieldCardsForCurrentSelection()
         }
-        schemaScrollView.post { schemaScrollView.smoothScrollTo(0, 0) }
     }
 
     private fun loadInitialSnapshot() {
@@ -283,20 +282,26 @@ class SchemaFragment : Fragment() {
         val isMaster = collectionMasterSwitch.isChecked
         val isOptions = collectionOptionsSwitch.isChecked
         if (displayName.isBlank()) {
-            statusText.text = getString(R.string.error_collection_name_required)
+            showTopError(getString(R.string.error_collection_name_required))
             return
         }
 
         setBusyState(true, getString(R.string.status_creating_collection))
         viewLifecycleOwner.lifecycleScope.launch {
-            val collection = withContext(Dispatchers.IO) {
-                databaseHelper.createCollection(displayName, description, isMaster, isOptions)
+            try {
+                val collection = withContext(Dispatchers.IO) {
+                    databaseHelper.createCollection(displayName, description, isMaster, isOptions)
+                }
+                refreshSnapshot(
+                    getString(R.string.status_collection_created, collection.displayName),
+                    preferredCollectionId = collection.id,
+                    clearCollectionForm = true
+                )
+            } catch (error: Throwable) {
+                val message = error.message ?: getString(R.string.status_ready)
+                setBusyState(false, message)
+                showTopError(message)
             }
-            refreshSnapshot(
-                getString(R.string.status_collection_created, collection.displayName),
-                preferredCollectionId = collection.id,
-                clearCollectionForm = true
-            )
         }
     }
 
@@ -310,11 +315,11 @@ class SchemaFragment : Fragment() {
         val optionDisplayRole = selectedOptionDisplayRole()
 
         if (selectedCollection == null || selectedCollection.id < 0) {
-            statusText.text = getString(R.string.error_collection_select)
+            showTopError(getString(R.string.error_collection_select))
             return
         }
         if (fieldName.isBlank()) {
-            statusText.text = getString(R.string.error_field_name_required)
+            showTopError(getString(R.string.error_field_name_required))
             return
         }
         if (fieldType == null) {
@@ -326,9 +331,10 @@ class SchemaFragment : Fragment() {
             return
         }
         if (fieldType == SchemaFieldType.LIST && optionSourceCollection == null) {
-            statusText.text = getString(R.string.error_option_source_required)
+            showTopError(getString(R.string.error_option_source_required))
             return
         }
+
         val editingCard = editingFieldCard
         val isUpdating = editingCard != null
         setBusyState(
@@ -336,42 +342,57 @@ class SchemaFragment : Fragment() {
             if (isUpdating) getString(R.string.schema_updating_field) else getString(R.string.status_creating_field)
         )
         viewLifecycleOwner.lifecycleScope.launch {
-            val field = withContext(Dispatchers.IO) {
-                if (editingCard == null) {
-                    databaseHelper.createField(
-                        selectedCollection.id,
-                        fieldName,
-                        fieldType.storageValue,
-                        searchMode.queryRoleValue,
-                        valueRule.isUniqueValue,
-                        valueRule.isRequiredValue,
-                        optionSourceCollection?.id,
-                        optionDisplayRole.storageValue
-                    )
-                } else {
-                    databaseHelper.updateField(
-                        fieldId = editingCard.id,
-                        displayName = fieldName,
-                        fieldType = fieldType.storageValue,
-                        queryRole = searchMode.queryRoleValue,
-                        isUniqueValue = valueRule.isUniqueValue,
-                        isRequiredValue = valueRule.isRequiredValue,
-                        optionSourceCollectionId = optionSourceCollection?.id,
-                        optionDisplayRole = optionDisplayRole.storageValue
-                    )
+            try {
+                val field = withContext(Dispatchers.IO) {
+                    if (editingCard == null) {
+                        databaseHelper.createField(
+                            selectedCollection.id,
+                            fieldName,
+                            fieldType.storageValue,
+                            searchMode.queryRoleValue,
+                            valueRule.isUniqueValue,
+                            valueRule.isRequiredValue,
+                            optionSourceCollection?.id,
+                            optionDisplayRole.storageValue
+                        )
+                    } else {
+                        databaseHelper.updateField(
+                            fieldId = editingCard.id,
+                            displayName = fieldName,
+                            fieldType = fieldType.storageValue,
+                            queryRole = searchMode.queryRoleValue,
+                            isUniqueValue = valueRule.isUniqueValue,
+                            isRequiredValue = valueRule.isRequiredValue,
+                            optionSourceCollectionId = optionSourceCollection?.id,
+                            optionDisplayRole = optionDisplayRole.storageValue
+                        )
+                    }
+                }
+                clearFieldEditor(clearInputs = false)
+                refreshSnapshot(
+                    if (isUpdating) {
+                        getString(R.string.schema_field_updated, field.displayName)
+                    } else {
+                        getString(R.string.status_field_created, field.displayName)
+                    },
+                    preferredCollectionId = selectedCollection.id,
+                    clearFieldForm = true
+                )
+            } catch (error: Throwable) {
+                val message = error.message ?: getString(R.string.status_ready)
+                setBusyState(false, message)
+                showTopError(message)
+                if (isUpdating) {
+                    createFieldButton.text = getString(R.string.button_update_field)
+                    cancelFieldEditButton.visibility = View.VISIBLE
                 }
             }
-            clearFieldEditor(clearInputs = false)
-            refreshSnapshot(
-                if (isUpdating) {
-                    getString(R.string.schema_field_updated, field.displayName)
-                } else {
-                    getString(R.string.status_field_created, field.displayName)
-                },
-                preferredCollectionId = selectedCollection.id,
-                clearFieldForm = true
-            )
         }
+    }
+
+    private fun showTopError(message: String) {
+        statusText.text = message
+        Snackbar.make(schemaContentContainer, message, Snackbar.LENGTH_LONG).show()
     }
 
     private suspend fun refreshSnapshot(
@@ -544,48 +565,16 @@ class SchemaFragment : Fragment() {
     }
 
     private fun configureKeyboardHandling() {
-        ViewCompat.setOnApplyWindowInsetsListener(schemaScrollView) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(schemaContentContainer) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            val bottomInset = maxOf(systemBars.bottom, ime.bottom)
             view.setPadding(
                 view.paddingLeft,
                 view.paddingTop,
                 view.paddingRight,
-                bottomInset + dpToPx(16)
+                systemBars.bottom + dpToPx(16)
             )
             insets
         }
-
-        registerFocusScroll(collectionNameInput)
-        registerFocusScroll(collectionDescriptionInput)
-        registerFocusScroll(fieldNameInput)
-    }
-
-    private fun registerFocusScroll(target: View) {
-        target.setOnFocusChangeListener { focusedView, hasFocus ->
-            if (!hasFocus) return@setOnFocusChangeListener
-            schemaScrollView.post {
-                val focusBottom = focusedView.bottomWithin(schemaContentContainer)
-                val visibleBottom = schemaScrollView.scrollY + schemaScrollView.height - schemaScrollView.paddingBottom
-                if (focusBottom > visibleBottom) {
-                    schemaScrollView.smoothScrollTo(
-                        0,
-                        focusBottom - schemaScrollView.height + schemaScrollView.paddingBottom + dpToPx(24)
-                    )
-                }
-            }
-        }
-    }
-
-    private fun View.bottomWithin(parent: ViewGroup): Int {
-        var totalBottom = bottom
-        var current: View? = this
-        while (current != null && current.parent is View && current.parent != parent) {
-            current = current.parent as? View
-            totalBottom += current?.top ?: 0
-        }
-        return totalBottom
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -836,7 +825,7 @@ class SchemaFragment : Fragment() {
         createFieldButton.text = getString(R.string.button_update_field)
         cancelFieldEditButton.visibility = View.VISIBLE
         statusText.text = getString(R.string.schema_editing_field_status, card.displayName)
-        schemaScrollView.post { schemaScrollView.smoothScrollTo(0, schemaFieldsTabContent.top) }
+        fieldNameInput.requestFocus()
     }
 
     private fun clearFieldEditor(clearInputs: Boolean) {

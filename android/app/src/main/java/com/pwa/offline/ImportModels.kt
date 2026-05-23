@@ -2,7 +2,7 @@ package com.pwa.offline
 
 enum class ImportValidationStatus {
     VALID,
-    MISSING_REQUIRED_COLUMNS
+    DUPLICATE_HEADERS
 }
 
 data class ImportValidationResult(
@@ -11,9 +11,10 @@ data class ImportValidationResult(
     val detectedHeaderNames: List<String>,
     val matchedFieldNames: List<String>,
     val missingFieldNames: List<String>,
-    val optionalMissingFieldNames: List<String>,
+    val duplicateHeaderNames: List<String>,
     val extraHeaderNames: List<String>,
-    val hasExtraColumns: Boolean,
+    val isOptionsImport: Boolean,
+    val optionsDedupFieldName: String?,
     val status: ImportValidationStatus,
     val validationState: ImportValidationState
 )

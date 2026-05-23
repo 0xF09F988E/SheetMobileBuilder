@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/recordCreateRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/paper"
-    android:fillViewport="true">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -50,6 +56,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="@string/record_create_status_no_tables" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/recordCreateProgressIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView
@@ -61,38 +75,69 @@
             android:text="@string/record_create_fields_empty"
             android:visibility="gone" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recordCreateFieldsRecyclerView"
+        <LinearLayout
+            android:id="@+id/recordCreateFieldsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:clipToPadding="false"
-            android:nestedScrollingEnabled="false" />
+            android:orientation="vertical" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-        <LinearLayout
-            android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/paper_alt"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="14dp">
+
+        <Button
+            android:id="@+id/recordCreateClearButton"
+            style="@style/Widget.PatriGO.Button.Danger.Md"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="12dp"
-            android:orientation="horizontal">
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="@string/record_create_clear_button" />
 
-            <Button
-                android:id="@+id/recordCreateClearButton"
-                style="@style/Widget.PatriGO.Button.Md"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:layout_weight="1"
-                android:text="@string/record_create_clear_button" />
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
 
             <Button
                 android:id="@+id/recordCreateSaveButton"
-                style="@style/Widget.PatriGO.Button.Md"
-                android:layout_width="0dp"
+                style="@style/Widget.PatriGO.Button.Success.Md"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
                 android:text="@string/record_create_save_button" />
-        </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/recordCreateSaveProgress"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="34dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/paper"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/recordCreateSaveLoadingText"
+                style="@style/TextAppearance.PatriGO.Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:drawablePadding="10dp"
+                android:text="@string/record_create_save_button_loading"
+                android:textColor="@color/paper"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</LinearLayout>

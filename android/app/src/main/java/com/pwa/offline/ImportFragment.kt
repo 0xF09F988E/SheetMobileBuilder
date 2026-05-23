@@ -2,6 +2,7 @@ package com.pwa.offline
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.provider.OpenableColumns
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -65,8 +66,10 @@ class ImportFragment : Fragment() {
     private lateinit var progressBar: android.widget.ProgressBar
     private lateinit var progressSummaryText: TextView
     private lateinit var progressMetricsText: TextView
+    private lateinit var rootView: View
 
     private var stagedWorkbookFile: File? = null
+    private var lastValidationRequestKey: String? = null
 
     private val openDocumentLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -88,6 +91,7 @@ class ImportFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        rootView = view
 
         tableSelector = view.findViewById(R.id.importTableSelector)
         sheetSelector = view.findViewById(R.id.importSheetSelector)
@@ -117,12 +121,10 @@ class ImportFragment : Fragment() {
         viewModel.loadInitialState()
     }
 
-    override fun onStop() {
-        viewModel.cancelImport(cancelledByExit = true)
-        super.onStop()
-    }
-
     override fun onDestroy() {
+        if (::rootView.isInitialized) {
+            rootView.keepScreenOn = false
+        }
         stagedWorkbookFile?.delete()
         stagedWorkbookFile = null
         super.onDestroy()
@@ -138,7 +140,7 @@ class ImportFragment : Fragment() {
             stagedWorkbookFile?.let(viewModel::importFile)
         }
         cancelImportOverlayButton.setOnClickListener {
-            viewModel.cancelImport(cancelledByExit = false)
+            confirmCancelImport()
         }
         clearTableDataButton.setOnClickListener {
             confirmClearSelectedTableData()
@@ -147,18 +149,15 @@ class ImportFragment : Fragment() {
         tableSelector.setOnItemClickListener { _, _, position, _ ->
             val option = viewModel.uiState.value.tableOptions.getOrNull(position)
             viewModel.selectTable(option)
-            stagedWorkbookFile?.let { viewModel.validateSelection(it) }
         }
         sheetSelector.setOnItemClickListener { _, _, position, _ ->
             val sheet = viewModel.uiState.value.workbookSheets.getOrNull(position)
             viewModel.selectSheet(sheet)
-            stagedWorkbookFile?.let { viewModel.validateSelection(it) }
         }
         headerRowSelector.setOnItemClickListener { _, _, position, _ ->
             val index = ImportConfig.headerRowOptions.getOrNull(position)?.minus(1)
                 ?: ImportConfig.defaultHeaderRowIndex
             viewModel.selectHeaderRow(index)
-            stagedWorkbookFile?.let { viewModel.validateSelection(it) }
         }
     }
 
@@ -173,6 +172,8 @@ class ImportFragment : Fragment() {
     }
 
     private fun renderState(state: ImportUiState) {
+        rootView.keepScreenOn = state.phase == ImportUiPhase.IMPORTING
+
         tableSelector.setAdapter(
             ArrayAdapter(
                 requireContext(),
@@ -212,6 +213,7 @@ class ImportFragment : Fragment() {
         renderStatus(state)
         renderProgress(state)
         renderResult(state.importResult)
+        maybeAutoValidate(state)
 
         val isBusy = state.isBusy
         loadingOverlay.visibility = if (isBusy) View.VISIBLE else View.GONE
@@ -235,6 +237,7 @@ class ImportFragment : Fragment() {
     private fun renderStatus(state: ImportUiState) {
         statusText.text = when {
             state.cancelledByExit -> getString(R.string.import_status_cancelled_on_exit)
+            state.cancelledManually -> getString(R.string.import_status_cancelled)
             state.phase == ImportUiPhase.INSPECTING -> getString(R.string.import_status_reading)
             state.phase == ImportUiPhase.VALIDATING -> getString(R.string.import_status_reading)
             state.phase == ImportUiPhase.IMPORTING -> getString(R.string.import_status_importing)
@@ -248,7 +251,7 @@ class ImportFragment : Fragment() {
             )
             state.validationResult != null -> when (state.validationResult.status) {
                 ImportValidationStatus.VALID -> getString(R.string.import_status_valid)
-                ImportValidationStatus.MISSING_REQUIRED_COLUMNS -> getString(R.string.import_status_invalid)
+                ImportValidationStatus.DUPLICATE_HEADERS -> getString(R.string.import_status_duplicate_headers)
             }
             else -> getString(R.string.import_status_idle)
         }
@@ -358,7 +361,7 @@ class ImportFragment : Fragment() {
         appendLine(
             when (result.status) {
                 ImportValidationStatus.VALID -> getString(R.string.import_validation_ok)
-                ImportValidationStatus.MISSING_REQUIRED_COLUMNS -> getString(R.string.import_validation_missing)
+                ImportValidationStatus.DUPLICATE_HEADERS -> getString(R.string.import_validation_duplicate_headers)
             },
             color = if (result.status == ImportValidationStatus.VALID) successColor else errorColor,
             bold = true
@@ -377,26 +380,33 @@ class ImportFragment : Fragment() {
         }
         if (result.missingFieldNames.isNotEmpty()) {
             appendLine(
-                getString(R.string.import_validation_missing_list, result.missingFieldNames.joinToString(", ")),
+                getString(R.string.import_validation_missing_list, result.missingFieldNames.joinToString(", "))
+            )
+        }
+        if (result.duplicateHeaderNames.isNotEmpty()) {
+            appendLine(
+                getString(
+                    R.string.import_validation_duplicate_list,
+                    result.duplicateHeaderNames.joinToString(", ")
+                ),
                 color = errorColor
             )
         }
-        if (result.optionalMissingFieldNames.isNotEmpty()) {
-            appendLine(
-                getString(
-                    R.string.import_validation_optional_missing_list,
-                    result.optionalMissingFieldNames.joinToString(", ")
-                ),
-                color = successColor
-            )
-        }
-        if (result.hasExtraColumns) {
+        if (result.extraHeaderNames.isNotEmpty()) {
             appendLine(
                 getString(
                     R.string.import_validation_extra_list,
                     result.extraHeaderNames.joinToString(", ")
+                )
+            )
+        }
+        if (result.isOptionsImport && !result.optionsDedupFieldName.isNullOrBlank()) {
+            appendLine(
+                getString(
+                    R.string.import_validation_options_mode,
+                    result.optionsDedupFieldName
                 ),
-                color = errorColor
+                color = successColor
             )
         }
         if (builder.isNotEmpty() && builder.last() == '\n') {
@@ -465,12 +475,49 @@ class ImportFragment : Fragment() {
             .show()
     }
 
+    private fun confirmCancelImport() {
+        if (viewModel.uiState.value.phase != ImportUiPhase.IMPORTING) return
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.dialog_cancel_import_title)
+            .setMessage(R.string.dialog_cancel_import_message)
+            .setNegativeButton(R.string.dialog_delete_cancel, null)
+            .setPositiveButton(R.string.import_button_cancel) { _, _ ->
+                viewModel.cancelImport(cancelledByExit = false)
+            }
+            .show()
+    }
+
     private fun stageWorkbook(uri: Uri) {
         stagedWorkbookFile?.delete()
         stagedWorkbookFile = copyUriToTempFile(uri)
-        val label = uri.lastPathSegment ?: uri.toString()
+        lastValidationRequestKey = null
+        val label = resolveDisplayName(uri)
         viewModel.setSelectedFileLabel(label)
         stagedWorkbookFile?.let(viewModel::inspectWorkbook)
+    }
+
+    private fun maybeAutoValidate(state: ImportUiState) {
+        val file = stagedWorkbookFile ?: return
+        if (state.phase != ImportUiPhase.IDLE) return
+
+        val collectionId = state.selectedTableOption?.id ?: return
+        if (collectionId < 0) return
+        val sheet = state.selectedSheet ?: return
+
+        val requestKey = buildString {
+            append(file.absolutePath)
+            append('|')
+            append(collectionId)
+            append('|')
+            append(sheet.path)
+            append('|')
+            append(state.selectedHeaderRowIndex)
+        }
+        if (requestKey == lastValidationRequestKey) return
+
+        lastValidationRequestKey = requestKey
+        viewModel.validateSelection(file)
     }
 
     private fun copyUriToTempFile(uri: Uri): File {
@@ -482,5 +529,25 @@ class ImportFragment : Fragment() {
             }
         }
         return tempFile
+    }
+
+    private fun resolveDisplayName(uri: Uri): String {
+        requireContext().contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (columnIndex >= 0 && cursor.moveToFirst()) {
+                val displayName = cursor.getString(columnIndex)?.trim().orEmpty()
+                if (displayName.isNotBlank()) {
+                    return displayName
+                }
+            }
+        }
+
+        return uri.lastPathSegment?.trim().takeUnless { it.isNullOrBlank() } ?: uri.toString()
     }
 }

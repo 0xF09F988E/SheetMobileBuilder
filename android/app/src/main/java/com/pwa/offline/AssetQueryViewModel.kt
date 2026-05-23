@@ -32,7 +32,6 @@ data class AssetQueryUiState(
     val collectionId: Long? = null,
     val lookupFields: List<FieldDefinition> = emptyList(),
     val recordDetail: AssetRecordDetail? = null,
-    val showAdditionalFields: Boolean = false,
     val isEditing: Boolean = false,
     val isBusy: Boolean = false,
     val status: AssetQueryStatus = AssetQueryStatus.EMPTY,
@@ -58,7 +57,6 @@ class AssetQueryViewModel(
                         collectionId = null,
                         lookupFields = emptyList(),
                         recordDetail = null,
-                        showAdditionalFields = false,
                         isEditing = false,
                         isBusy = false,
                         status = AssetQueryStatus.EMPTY
@@ -70,7 +68,6 @@ class AssetQueryViewModel(
                     collectionId = master.id,
                     lookupFields = lookupFields,
                     recordDetail = null,
-                    showAdditionalFields = false,
                     isEditing = false,
                     isBusy = false,
                     status = if (lookupFields.isEmpty()) AssetQueryStatus.LOOKUP_REQUIRED else AssetQueryStatus.READY
@@ -116,7 +113,6 @@ class AssetQueryViewModel(
                     if (detail == null) {
                         it.copy(
                             recordDetail = null,
-                            showAdditionalFields = false,
                             isEditing = false,
                             isBusy = false,
                             status = AssetQueryStatus.NOT_FOUND
@@ -124,7 +120,6 @@ class AssetQueryViewModel(
                     } else {
                         it.copy(
                             recordDetail = detail,
-                            showAdditionalFields = false,
                             isEditing = false,
                             isBusy = false,
                             status = AssetQueryStatus.READ_ONLY
@@ -149,7 +144,6 @@ class AssetQueryViewModel(
         _uiState.update {
             it.copy(
                 recordDetail = null,
-                showAdditionalFields = false,
                 isEditing = false,
                 status = if (it.lookupFields.isEmpty()) AssetQueryStatus.LOOKUP_REQUIRED else AssetQueryStatus.READY,
                 errorMessage = null
@@ -161,7 +155,6 @@ class AssetQueryViewModel(
         if (_uiState.value.recordDetail == null) return
         _uiState.update {
             it.copy(
-                showAdditionalFields = true,
                 isEditing = true,
                 status = AssetQueryStatus.EDITING,
                 errorMessage = null
@@ -180,7 +173,7 @@ class AssetQueryViewModel(
         }
     }
 
-    fun save(updates: Map<Long, String>, locationMeta: ActionLocationMeta? = null) {
+    fun save(updates: Map<Long, String>) {
         val detail = _uiState.value.recordDetail ?: return
         activeJob?.cancel()
         activeJob = viewModelScope.launch {
@@ -197,13 +190,11 @@ class AssetQueryViewModel(
                     recordId = detail.recordId,
                     collectionId = detail.collectionId,
                     fields = fields,
-                    updates = updates,
-                    locationMeta = locationMeta
+                    updates = updates
                 )
                 _uiState.update {
                     it.copy(
                         recordDetail = refreshed ?: detail,
-                        showAdditionalFields = false,
                         isEditing = false,
                         isBusy = false,
                         status = AssetQueryStatus.SAVED
@@ -223,7 +214,7 @@ class AssetQueryViewModel(
         }
     }
 
-    fun markConforme(locationMeta: ActionLocationMeta? = null) {
+    fun markConforme() {
         val detail = _uiState.value.recordDetail ?: return
         activeJob?.cancel()
         activeJob = viewModelScope.launch {
@@ -237,13 +228,11 @@ class AssetQueryViewModel(
                 }
                 val refreshed = repository.markConforme(
                     detail.recordId,
-                    detail.collectionId,
-                    locationMeta
+                    detail.collectionId
                 )
                 _uiState.update {
                     it.copy(
                         recordDetail = refreshed ?: detail,
-                        showAdditionalFields = false,
                         isEditing = false,
                         isBusy = false,
                         status = AssetQueryStatus.CONFIRMED
@@ -290,14 +279,6 @@ class AssetQueryViewModel(
                 }
             }
         }
-    }
-
-    fun showAdditionalFields() {
-        _uiState.update { it.copy(showAdditionalFields = true) }
-    }
-
-    fun hideAdditionalFields() {
-        _uiState.update { it.copy(showAdditionalFields = false) }
     }
 
     override fun onCleared() {

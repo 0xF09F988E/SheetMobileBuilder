@@ -231,6 +231,9 @@ class AppDatabaseHelper(context: Context) :
                 if (!sourceCollection.isOptions) {
                     throw IllegalStateException("La columna Lista solo puede usar tablas de opciones.")
                 }
+                if (!hasOptionAutocompleteColumns(optionSourceCollectionId)) {
+                    throw IllegalStateException("La tabla de opciones necesita al menos una columna visible o de apoyo para usarse como Lista.")
+                }
             }
             if (!targetCollection.isOptions && optionDisplayRole != OPTION_DISPLAY_ROLE_NONE) {
                 throw IllegalStateException("Solo las tablas de opciones pueden definir columna visible o de apoyo.")
@@ -314,6 +317,9 @@ class AppDatabaseHelper(context: Context) :
                 if (!sourceCollection.isOptions) {
                     throw IllegalStateException("La columna Lista solo puede usar tablas de opciones.")
                 }
+                if (!hasOptionAutocompleteColumns(optionSourceCollectionId)) {
+                    throw IllegalStateException("La tabla de opciones necesita al menos una columna visible o de apoyo para usarse como Lista.")
+                }
             }
             if (!targetCollection.isOptions && optionDisplayRole != OPTION_DISPLAY_ROLE_NONE) {
                 throw IllegalStateException("Solo las tablas de opciones pueden definir columna visible o de apoyo.")
@@ -332,6 +338,9 @@ class AppDatabaseHelper(context: Context) :
 
             if (isRequiredValue && hasEmptyRequiredValues(existingField.collectionId, fieldId, db)) {
                 throw IllegalStateException(appContext.getString(R.string.schema_required_existing_data_error))
+            }
+            if (isUniqueValue && hasDuplicateUniqueValues(existingField.copy(fieldType = fieldType), db)) {
+                throw IllegalStateException(appContext.getString(R.string.schema_unique_existing_data_error))
             }
 
             val normalizedName = displayName.trim()
@@ -620,6 +629,34 @@ class AppDatabaseHelper(context: Context) :
 
     fun normalizeIdentifierValue(input: String): String = normalizeIdentifier(input)
 
+    fun normalizeUniqueImportValue(input: String): String = normalizeUniqueText(input)
+
+    fun loadExistingOptionImportValueCache(fieldId: Long): MutableSet<String> {
+        val values = linkedSetOf<String>()
+        val field = listFieldDefinitions(getFieldCollectionId(fieldId) ?: return values)
+            .firstOrNull { it.id == fieldId }
+            ?: return values
+
+        readableDatabase.rawQuery(
+            """
+            SELECT value_text, value_number, value_date, value_boolean, value_reference_id
+            FROM $TABLE_RECORD_VALUES
+            WHERE field_id = ?
+            """.trimIndent(),
+            arrayOf(fieldId.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val rawValue = readStoredFieldValue(field, cursor).trim()
+                if (rawValue.isBlank()) continue
+                val normalized = normalizeUniqueText(rawValue)
+                if (normalized.isNotBlank()) {
+                    values += normalized
+                }
+            }
+        }
+        return values
+    }
+
     fun clearAllData() {
         val db = writableDatabase
         db.beginTransaction()
@@ -728,9 +765,6 @@ class AppDatabaseHelper(context: Context) :
         var insertedRecords = 0
         val conflicts = mutableListOf<ImportConflict>()
         val activeUniqueValueCache = uniqueValueCache ?: loadExistingUniqueValueCacheForRows(collectionId, rows)
-        val requiredFieldIds = listFieldDefinitions(collectionId)
-            .filter { it.isRequiredValue }
-            .associateBy { it.id }
 
         db.beginTransaction()
         try {
@@ -812,25 +846,6 @@ class AppDatabaseHelper(context: Context) :
                 }
 
                 if (rowValues.isEmpty()) return@forEachIndexed
-
-                requiredFieldIds.values.forEach { requiredField ->
-                    val hasValue = row.values.any { rowValue ->
-                        rowValue.field.id == requiredField.id && rowValue.rawValue.trim().isNotEmpty()
-                    }
-                    if (!hasValue && rowConflict == null) {
-                        rowConflict = ImportConflict(
-                            rowNumber = startingRowNumber + index,
-                            reason = ImportConflictReason.INVALID_VALUE,
-                            fieldName = requiredField.displayName,
-                            value = ""
-                        )
-                    }
-                }
-
-                rowConflict?.let {
-                    conflicts += it
-                    return@forEachIndexed
-                }
 
                 val pendingUniqueValues = linkedMapOf<Long, Pair<String, PreparedValue>>()
                 rowValues.forEach { prepared ->
@@ -983,6 +998,22 @@ class AppDatabaseHelper(context: Context) :
         }
     }
 
+    fun deleteRecord(recordId: Long): Boolean {
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            db.delete(TABLE_REVIEW_LOG, "record_id = ?", arrayOf(recordId.toString()))
+            db.delete(TABLE_UNIQUE_INDEX, "record_id = ?", arrayOf(recordId.toString()))
+            db.delete(TABLE_LOOKUP_INDEX, "record_id = ?", arrayOf(recordId.toString()))
+            db.delete(TABLE_RECORD_VALUES, "record_id = ?", arrayOf(recordId.toString()))
+            val deleted = db.delete(TABLE_RECORDS, "id = ?", arrayOf(recordId.toString()))
+            db.setTransactionSuccessful()
+            deleted > 0
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun countRecordsForExport(
         collectionId: Long,
         criterion: ExportCriterion
@@ -1042,22 +1073,8 @@ class AppDatabaseHelper(context: Context) :
                     r.review_status,
                     r.review_action,
                     r.reviewed_at,
-                    r.changed_fields_text,
-                    rl.latitude,
-                    rl.longitude,
-                    rl.accuracy_meters,
-                    rl.created_at
+                    r.changed_fields_text
                 FROM $TABLE_RECORDS r
-                LEFT JOIN $TABLE_REVIEW_LOG rl
-                    ON rl.id = (
-                        SELECT inner_rl.id
-                        FROM $TABLE_REVIEW_LOG inner_rl
-                        WHERE inner_rl.record_id = r.id
-                            AND inner_rl.latitude IS NOT NULL
-                            AND inner_rl.longitude IS NOT NULL
-                        ORDER BY inner_rl.created_at DESC, inner_rl.id DESC
-                        LIMIT 1
-                    )
                 WHERE r.id IN ($placeholders)
                 ORDER BY r.id ASC
                 """.trimIndent(),
@@ -1071,11 +1088,7 @@ class AppDatabaseHelper(context: Context) :
                         reviewStatus = cursor.getString(3).orEmpty(),
                         reviewAction = cursor.getString(4).orEmpty(),
                         reviewedAt = if (cursor.isNull(5)) "" else cursor.getString(5),
-                        changedFieldsText = cursor.getString(6).orEmpty(),
-                        latitude = if (cursor.isNull(7)) null else cursor.getDouble(7),
-                        longitude = if (cursor.isNull(8)) null else cursor.getDouble(8),
-                        accuracyMeters = if (cursor.isNull(9)) null else cursor.getDouble(9),
-                        locationCapturedAt = if (cursor.isNull(10)) "" else cursor.getString(10)
+                        changedFieldsText = cursor.getString(6).orEmpty()
                     )
                 }
             }
@@ -1100,7 +1113,7 @@ class AppDatabaseHelper(context: Context) :
                 onCancellationCheck()
                 val recordValues = valuesByRecord[recordId].orEmpty()
                 val metadata = metadataByRecord[recordId]
-                val row = ArrayList<String>(fields.size + 11)
+                val row = ArrayList<String>(fields.size + 7)
                 row += recordId.toString()
                 row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.createdAt.orEmpty())
                 row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.updatedAt.orEmpty())
@@ -1108,10 +1121,6 @@ class AppDatabaseHelper(context: Context) :
                 row += metadata?.reviewAction.orEmpty()
                 row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.reviewedAt.orEmpty())
                 row += metadata?.changedFieldsText.orEmpty()
-                row += metadata?.latitude?.toString().orEmpty()
-                row += metadata?.longitude?.toString().orEmpty()
-                row += metadata?.accuracyMeters?.toString().orEmpty()
-                row += TimestampFormatters.sqliteUtcToDeviceMx(metadata?.locationCapturedAt.orEmpty())
                 fields.forEach { field ->
                     row += recordValues[field.id].orEmpty()
                 }
@@ -1129,15 +1138,22 @@ class AppDatabaseHelper(context: Context) :
         val normalizedValue = normalizeLookupValue(rawQuery)
         if (normalizedValue.isBlank()) return null
 
+        val fieldPlaceholders = lookupFields.joinToString(",") { "?" }
         val recordId = readableDatabase.rawQuery(
             """
             SELECT record_id
             FROM $TABLE_LOOKUP_INDEX
-            WHERE collection_id = ? AND normalized_value = ?
+            WHERE collection_id = ?
+              AND field_id IN ($fieldPlaceholders)
+              AND normalized_value = ?
             ORDER BY record_id DESC
             LIMIT 1
             """.trimIndent(),
-            arrayOf(collectionId.toString(), normalizedValue)
+            buildList {
+                add(collectionId.toString())
+                addAll(lookupFields.map { it.id.toString() })
+                add(normalizedValue)
+            }.toTypedArray()
         ).use { cursor ->
             if (cursor.moveToFirst()) cursor.getLong(0) else return null
         }
@@ -1148,6 +1164,7 @@ class AppDatabaseHelper(context: Context) :
     fun getRecordDetail(collectionId: Long, recordId: Long): AssetRecordDetail? {
         val fields = listFieldDefinitions(collectionId)
         if (fields.isEmpty()) return null
+        val fieldById = fields.associateBy { it.id }
 
         val recordMeta = readableDatabase.rawQuery(
             """
@@ -1184,7 +1201,7 @@ class AppDatabaseHelper(context: Context) :
         ).use { cursor ->
             while (cursor.moveToNext()) {
                 val fieldId = cursor.getLong(1)
-                val field = fields.firstOrNull { it.id == fieldId } ?: continue
+                val field = fieldById[fieldId] ?: continue
                 valueMap[fieldId] = readDisplayValue(cursor, field)
             }
         }
@@ -1282,7 +1299,16 @@ class AppDatabaseHelper(context: Context) :
                     recordValues[field.id]?.trim()?.takeIf { it.isNotEmpty() }
                 }.joinToString(" · ").trim()
             }
-            if (label.isEmpty()) null else OptionSuggestion(recordId = recordId, displayLabel = label)
+            val selectedValue = primaryValue ?: supportValue ?: label
+            if (label.isEmpty() || selectedValue.isEmpty()) {
+                null
+            } else {
+                OptionSuggestion(
+                    recordId = recordId,
+                    displayLabel = label,
+                    selectedValue = selectedValue
+                )
+            }
         }
     }
 
@@ -1290,9 +1316,9 @@ class AppDatabaseHelper(context: Context) :
         recordId: Long,
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>,
-        locationMeta: ActionLocationMeta? = null
+        updates: Map<Long, String>
     ) {
+        if (updates.isEmpty()) return
         val db = writableDatabase
         val fieldsById = fields.associateBy { it.id }
         val changedFields = linkedSetOf<String>()
@@ -1321,23 +1347,27 @@ class AppDatabaseHelper(context: Context) :
                 val field = fieldsById[fieldId] ?: return@forEach
                 val trimmed = rawValue.trim()
                 val previousValue = currentFieldValue(recordId, field)
+                val storedSnapshot = loadStoredFieldSnapshot(recordId, fieldId)
 
                 if (field.isRequiredValue && trimmed.isEmpty()) {
                     throw IllegalStateException("La columna \"${field.displayName}\" es obligatoria.")
                 }
 
-                db.delete(
-                    TABLE_LOOKUP_INDEX,
-                    "record_id = ? AND field_id = ?",
-                    arrayOf(recordId.toString(), fieldId.toString())
-                )
-                db.delete(
-                    TABLE_UNIQUE_INDEX,
-                    "record_id = ? AND field_id = ?",
-                    arrayOf(recordId.toString(), fieldId.toString())
-                )
+                if (trimmed.isEmpty() && storedSnapshot == null) {
+                    return@forEach
+                }
 
                 if (trimmed.isEmpty()) {
+                    db.delete(
+                        TABLE_LOOKUP_INDEX,
+                        "record_id = ? AND field_id = ?",
+                        arrayOf(recordId.toString(), fieldId.toString())
+                    )
+                    db.delete(
+                        TABLE_UNIQUE_INDEX,
+                        "record_id = ? AND field_id = ?",
+                        arrayOf(recordId.toString(), fieldId.toString())
+                    )
                     db.delete(
                         TABLE_RECORD_VALUES,
                         "record_id = ? AND field_id = ?",
@@ -1351,6 +1381,21 @@ class AppDatabaseHelper(context: Context) :
 
                 val prepared = prepareValue(field, trimmed)
                     ?: throw IllegalStateException("No se pudo preparar el valor de ${field.displayName}.")
+
+                if (storedSnapshot != null && isPreparedValueEquivalent(storedSnapshot, prepared)) {
+                    return@forEach
+                }
+
+                db.delete(
+                    TABLE_LOOKUP_INDEX,
+                    "record_id = ? AND field_id = ?",
+                    arrayOf(recordId.toString(), fieldId.toString())
+                )
+                db.delete(
+                    TABLE_UNIQUE_INDEX,
+                    "record_id = ? AND field_id = ?",
+                    arrayOf(recordId.toString(), fieldId.toString())
+                )
 
                 if (prepared.isUniqueValue) {
                     val normalizedUniqueValue = buildUniqueIndexValue(prepared)
@@ -1423,8 +1468,7 @@ class AppDatabaseHelper(context: Context) :
                     recordId = recordId,
                     collectionId = collectionId,
                     actionType = ReviewActionCodes.EDIT_SAVED,
-                    changedFields = changedFields.toList(),
-                    locationMeta = locationMeta
+                    changedFields = changedFields.toList()
                 )
             } else {
                 db.execSQL(
@@ -1442,8 +1486,7 @@ class AppDatabaseHelper(context: Context) :
     fun createRecordValues(
         collectionId: Long,
         fields: List<FieldDefinition>,
-        updates: Map<Long, String>,
-        locationMeta: ActionLocationMeta? = null
+        updates: Map<Long, String>
     ): Long {
         val db = writableDatabase
         val fieldsById = fields.associateBy { it.id }
@@ -1540,8 +1583,7 @@ class AppDatabaseHelper(context: Context) :
                 recordId = recordId,
                 collectionId = collectionId,
                 actionType = ReviewActionCodes.CREATED_MANUAL,
-                changedFields = preparedValues.map { it.fieldDisplayName },
-                locationMeta = locationMeta
+                changedFields = preparedValues.map { it.fieldDisplayName }
             )
 
             db.setTransactionSuccessful()
@@ -1553,8 +1595,7 @@ class AppDatabaseHelper(context: Context) :
 
     fun markRecordAsConforme(
         recordId: Long,
-        collectionId: Long,
-        locationMeta: ActionLocationMeta? = null
+        collectionId: Long
     ) {
         val db = writableDatabase
         db.beginTransaction()
@@ -1571,8 +1612,7 @@ class AppDatabaseHelper(context: Context) :
                 recordId = recordId,
                 collectionId = collectionId,
                 actionType = ReviewActionCodes.CONFIRMED_MANUAL,
-                changedFields = emptyList(),
-                locationMeta = locationMeta
+                changedFields = emptyList()
             )
             db.setTransactionSuccessful()
         } finally {
@@ -1621,6 +1661,77 @@ class AppDatabaseHelper(context: Context) :
             totalRecords = totalRecords,
             tableCards = tableCards
         )
+    }
+
+    fun fetchReviewStatusDashboard(collectionId: Long): ReviewStatusDashboardSummary {
+        return readableDatabase.rawQuery(
+            """
+            SELECT
+                COUNT(*) AS total_count,
+                COALESCE(SUM(CASE WHEN review_status = '${ReviewStatusCodes.PENDING}' THEN 1 ELSE 0 END), 0) AS pending_count,
+                COALESCE(SUM(CASE WHEN review_status = '${ReviewStatusCodes.CONFIRMED}' THEN 1 ELSE 0 END), 0) AS confirmed_count,
+                COALESCE(SUM(CASE WHEN review_status = '${ReviewStatusCodes.UPDATED}' THEN 1 ELSE 0 END), 0) AS updated_count
+            FROM $TABLE_RECORDS
+            WHERE collection_id = ?
+            """.trimIndent(),
+            arrayOf(collectionId.toString())
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return@use ReviewStatusDashboardSummary()
+            }
+            ReviewStatusDashboardSummary(
+                totalCount = cursor.getInt(0),
+                pendingCount = cursor.getInt(1),
+                confirmedCount = cursor.getInt(2),
+                updatedCount = cursor.getInt(3)
+            )
+        }
+    }
+
+    fun fetchGroupedDashboardCards(
+        collectionId: Long,
+        fieldId: Long,
+        reviewStatus: String? = null
+    ): List<GroupedDashboardCard> {
+        val field = getFieldDefinitionById(fieldId) ?: return emptyList()
+        if (field.collectionId != collectionId) return emptyList()
+
+        val args = mutableListOf(fieldId.toString(), collectionId.toString())
+        val statusClause = if (reviewStatus.isNullOrBlank()) {
+            ""
+        } else {
+            args += reviewStatus
+            "AND r.review_status = ?"
+        }
+
+        val result = mutableListOf<GroupedDashboardCard>()
+        readableDatabase.rawQuery(
+            """
+            SELECT
+                rv.value_text,
+                rv.value_number,
+                rv.value_date,
+                rv.value_boolean,
+                COUNT(r.id) AS record_count
+            FROM $TABLE_RECORDS r
+            LEFT JOIN $TABLE_RECORD_VALUES rv
+                ON rv.record_id = r.id
+               AND rv.field_id = ?
+            WHERE r.collection_id = ?
+            $statusClause
+            GROUP BY rv.value_text, rv.value_number, rv.value_date, rv.value_boolean
+            ORDER BY record_count DESC, rv.value_text COLLATE NOCASE ASC, rv.value_date ASC, rv.value_number ASC
+            """.trimIndent(),
+            args.toTypedArray()
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result += GroupedDashboardCard(
+                    valueLabel = readGroupedDashboardValue(field, cursor),
+                    recordCount = cursor.getInt(4)
+                )
+            }
+        }
+        return result
     }
 
     fun listRecordPage(
@@ -1760,6 +1871,24 @@ class AppDatabaseHelper(context: Context) :
         }
     }
 
+    private fun hasOptionAutocompleteColumns(collectionId: Long): Boolean {
+        readableDatabase.rawQuery(
+            """
+            SELECT COUNT(*)
+            FROM $TABLE_FIELDS
+            WHERE collection_id = ?
+              AND option_display_role IN (?, ?)
+            """.trimIndent(),
+            arrayOf(
+                collectionId.toString(),
+                OPTION_DISPLAY_ROLE_PRIMARY,
+                OPTION_DISPLAY_ROLE_SUPPORT
+            )
+        ).use { cursor ->
+            return cursor.moveToFirst() && cursor.getInt(0) > 0
+        }
+    }
+
     private fun getFieldDefinitionById(fieldId: Long, db: SQLiteDatabase = readableDatabase): FieldDefinition? {
         return db.rawQuery(
             """
@@ -1814,6 +1943,34 @@ class AppDatabaseHelper(context: Context) :
             arrayOf(fieldId.toString(), collectionId.toString())
         ).use { cursor ->
             cursor.moveToFirst() && cursor.getInt(0) > 0
+        }
+    }
+
+    private fun hasDuplicateUniqueValues(
+        field: FieldDefinition,
+        db: SQLiteDatabase = readableDatabase
+    ): Boolean {
+        val seen = linkedSetOf<String>()
+        return db.rawQuery(
+            """
+            SELECT rv.value_text, rv.value_number, rv.value_date, rv.value_boolean, rv.record_id
+            FROM $TABLE_RECORD_VALUES rv
+            INNER JOIN $TABLE_RECORDS r ON r.id = rv.record_id
+            WHERE rv.field_id = ?
+              AND r.collection_id = ?
+            ORDER BY rv.record_id ASC
+            """.trimIndent(),
+            arrayOf(field.id.toString(), field.collectionId.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val rawValue = readStoredFieldValue(field, cursor)
+                val prepared = prepareValue(field, rawValue) ?: continue
+                val normalizedUniqueValue = buildUniqueIndexValue(prepared) ?: continue
+                if (!seen.add(normalizedUniqueValue)) {
+                    return@use true
+                }
+            }
+            false
         }
     }
 
@@ -1938,6 +2095,15 @@ class AppDatabaseHelper(context: Context) :
             arrayOf(collectionId.toString(), slug)
         ).use { cursor ->
             return cursor.moveToFirst()
+        }
+    }
+
+    private fun getFieldCollectionId(fieldId: Long): Long? {
+        readableDatabase.rawQuery(
+            "SELECT collection_id FROM $TABLE_FIELDS WHERE id = ? LIMIT 1",
+            arrayOf(fieldId.toString())
+        ).use { cursor ->
+            return if (cursor.moveToFirst()) cursor.getLong(0) else null
         }
     }
 
@@ -2112,6 +2278,22 @@ class AppDatabaseHelper(context: Context) :
         }
     }
 
+    private fun readGroupedDashboardValue(field: FieldDefinition, cursor: Cursor): String {
+        val value = when (field.fieldType) {
+            "number" -> if (cursor.isNull(1)) "" else cursor.getDouble(1).toString()
+            "date" -> cursor.getString(2).orEmpty()
+            "boolean" -> when {
+                cursor.isNull(3) -> ""
+                cursor.getInt(3) == 1 -> "Si"
+                else -> "No"
+            }
+
+            else -> cursor.getString(0).orEmpty()
+        }.trim()
+
+        return if (value.isBlank()) "Sin valor" else value
+    }
+
     private fun bindNullableString(statement: SQLiteStatement, index: Int, value: String?) {
         if (value == null) statement.bindNull(index) else statement.bindString(index, value)
     }
@@ -2137,6 +2319,38 @@ class AppDatabaseHelper(context: Context) :
             if (!cursor.moveToFirst()) return@use ""
             readStoredFieldValue(field, cursor)
         }
+    }
+
+    private fun loadStoredFieldSnapshot(recordId: Long, fieldId: Long): StoredFieldSnapshot? {
+        return readableDatabase.rawQuery(
+            """
+            SELECT value_text, value_number, value_date, value_boolean, value_reference_id
+            FROM $TABLE_RECORD_VALUES
+            WHERE record_id = ? AND field_id = ?
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(recordId.toString(), fieldId.toString())
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            StoredFieldSnapshot(
+                textValue = cursor.getString(0),
+                numberValue = cursor.getDouble(1).takeIf { !cursor.isNull(1) },
+                dateValue = cursor.getString(2),
+                booleanValue = cursor.getInt(3).takeIf { !cursor.isNull(3) },
+                referenceId = cursor.getLong(4).takeIf { !cursor.isNull(4) }
+            )
+        }
+    }
+
+    private fun isPreparedValueEquivalent(
+        stored: StoredFieldSnapshot,
+        prepared: PreparedValue
+    ): Boolean {
+        return stored.textValue == prepared.textValue &&
+            stored.numberValue == prepared.numberValue &&
+            stored.dateValue == prepared.dateValue &&
+            stored.booleanValue == prepared.booleanValue &&
+            stored.referenceId == prepared.referenceId
     }
 
     private fun readStoredFieldValue(field: FieldDefinition, cursor: Cursor): String {
@@ -2226,8 +2440,7 @@ class AppDatabaseHelper(context: Context) :
         recordId: Long,
         collectionId: Long,
         actionType: String,
-        changedFields: List<String>,
-        locationMeta: ActionLocationMeta? = null
+        changedFields: List<String>
     ) {
         db.insertOrThrow(
             TABLE_REVIEW_LOG,
@@ -2237,9 +2450,6 @@ class AppDatabaseHelper(context: Context) :
                 put("collection_id", collectionId)
                 put("action_type", actionType)
                 put("changed_fields_text", changedFields.joinToString(","))
-                put("latitude", locationMeta?.latitude)
-                put("longitude", locationMeta?.longitude)
-                put("accuracy_meters", locationMeta?.accuracyMeters)
             }
         )
     }
@@ -2287,11 +2497,7 @@ private data class ExportRecordMeta(
     val reviewStatus: String,
     val reviewAction: String,
     val reviewedAt: String,
-    val changedFieldsText: String,
-    val latitude: Double? = null,
-    val longitude: Double? = null,
-    val accuracyMeters: Double? = null,
-    val locationCapturedAt: String = ""
+    val changedFieldsText: String
 )
 
 private data class PreparedValue(
@@ -2308,6 +2514,14 @@ private data class PreparedValue(
     val isUniqueValue: Boolean = false,
     val lookupRawValue: String? = null,
     val uniqueRawValue: String? = null
+)
+
+private data class StoredFieldSnapshot(
+    val textValue: String? = null,
+    val numberValue: Double? = null,
+    val dateValue: String? = null,
+    val booleanValue: Int? = null,
+    val referenceId: Long? = null
 )
 
 data class CollectionOption(
@@ -2382,7 +2596,8 @@ data class AssetFieldValue(
 
 data class OptionSuggestion(
     val recordId: Long,
-    val displayLabel: String
+    val displayLabel: String,
+    val selectedValue: String
 ) {
     override fun toString(): String = displayLabel
 }
@@ -2391,6 +2606,18 @@ data class DashboardSummary(
     val totalTables: Int,
     val totalRecords: Int,
     val tableCards: List<TableDashboardCard>
+)
+
+data class ReviewStatusDashboardSummary(
+    val totalCount: Int = 0,
+    val pendingCount: Int = 0,
+    val confirmedCount: Int = 0,
+    val updatedCount: Int = 0
+)
+
+data class GroupedDashboardCard(
+    val valueLabel: String,
+    val recordCount: Int
 )
 
 data class TableDashboardCard(

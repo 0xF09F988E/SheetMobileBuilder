@@ -7,6 +7,12 @@ class ImportService(
     private val databaseHelper: AppDatabaseHelper,
     private val workbookReader: ImportWorkbookReader
 ) {
+    private data class OptionsImportContext(
+        val dedupFieldId: Long,
+        val dedupFieldDisplayName: String,
+        val existingNormalizedValues: MutableSet<String>
+    )
+
     fun inspectWorkbook(file: File): WorkbookInspection {
         return workbookReader.inspect(file)
     }
@@ -33,6 +39,9 @@ class ImportService(
         val headerRowIndex = validationState.headerRowIndex
         val firstDataRowNumber = headerRowIndex + 2
         val totalRows = (sheet.rowCount - firstDataRowNumber + 1).coerceAtLeast(0)
+        val collection = requireNotNull(databaseHelper.getCollectionOption(collectionId)) {
+            "La tabla seleccionada ya no existe."
+        }
         val fields = databaseHelper.listFieldDefinitions(collectionId)
         val fieldBySlug = fields.associateBy { it.slug }
         val importPlan = validationState.normalizedHeaders.mapIndexedNotNull { index, slug ->
@@ -52,6 +61,7 @@ class ImportService(
                 .distinct()
                 .toList()
         )
+        val optionsImportContext = buildOptionsImportContext(collection, importPlan)
 
         val batch = mutableListOf<ImportRowData>()
         var importedCount = 0
@@ -83,7 +93,22 @@ class ImportService(
                 }
 
                 if (hasMeaningfulValue) {
-                    batch += ImportRowData(values = rowValues)
+                    if (optionsImportContext != null) {
+                        val dedupRawValue = rowValues.firstOrNull { it.field.id == optionsImportContext.dedupFieldId }
+                            ?.rawValue
+                            .orEmpty()
+                            .trim()
+                        val normalizedDedupValue = databaseHelper.normalizeUniqueImportValue(dedupRawValue)
+                        if (normalizedDedupValue.isNotBlank()) {
+                            if (optionsImportContext.existingNormalizedValues.add(normalizedDedupValue)) {
+                                batch += ImportRowData(values = rowValues)
+                            } else {
+                                skippedRows += 1
+                            }
+                        }
+                    } else {
+                        batch += ImportRowData(values = rowValues)
+                    }
                 }
 
                 if (batch.size >= ImportConfig.batchSize) {
@@ -161,25 +186,38 @@ class ImportService(
         headerRowIndex: Int
     ): ImportValidationResult {
         val fields = databaseHelper.listFieldDefinitions(collectionId)
+        val collection = databaseHelper.getCollectionOption(collectionId)
         val fieldNameBySlug = fields.associate { it.slug to it.displayName }
-        val requiredFields = fields.filter { it.isRequiredValue }
-        val optionalFields = fields.filterNot { it.isRequiredValue }
-        val expectedSlugs = requiredFields.map { it.slug }
-        val normalizedHeaders = preview.headers.map(databaseHelper::normalizeIdentifierValue)
+        val expectedSlugs = fields.map { it.slug }
+        val headerPairs = preview.headers.map { rawHeader ->
+            rawHeader to databaseHelper.normalizeIdentifierValue(rawHeader)
+        }
+        val normalizedHeaders = headerPairs.map { it.second }
         val missing = expectedSlugs.filterNot(normalizedHeaders::contains)
         val matched = expectedSlugs.filter(normalizedHeaders::contains)
-        val optionalMissing = optionalFields.map { it.slug }.filterNot(normalizedHeaders::contains)
         val knownSlugs = fields.map { it.slug }
-        val extra = normalizedHeaders.filterNot(knownSlugs::contains)
+        val extra = headerPairs.filterNot { (_, normalized) -> normalized in knownSlugs }
         val expectedNames = fields.map { it.displayName }
-        val detectedNames = normalizedHeaders.map { normalized ->
-            fieldNameBySlug[normalized] ?: normalized
-        }
+        val detectedNames = preview.headers.map { it.trim() }
+        val duplicateNames = headerPairs
+            .groupBy { it.second }
+            .values
+            .filter { group -> group.size > 1 }
+            .flatMap { group ->
+                group.map { (rawHeader, normalizedHeader) ->
+                    rawHeader.trim().ifBlank { normalizedHeader }
+                }
+            }
+            .distinct()
         val matchedNames = matched.map { fieldNameBySlug[it] ?: it }
         val missingNames = missing.map { fieldNameBySlug[it] ?: it }
-        val optionalMissingNames = optionalMissing.map { fieldNameBySlug[it] ?: it }
-        val extraNames = extra.map { normalized ->
-            fieldNameBySlug[normalized] ?: normalized
+        val extraNames = extra.map { (rawHeader, normalizedHeader) ->
+            rawHeader.trim().ifBlank { fieldNameBySlug[normalizedHeader] ?: normalizedHeader }
+        }
+        val optionsDedupField = if (collection?.isOptions == true) {
+            fields.firstOrNull { it.optionDisplayRole == "primary" } ?: fields.firstOrNull()
+        } else {
+            null
         }
 
         return ImportValidationResult(
@@ -188,20 +226,38 @@ class ImportService(
             detectedHeaderNames = detectedNames,
             matchedFieldNames = matchedNames,
             missingFieldNames = missingNames,
-            optionalMissingFieldNames = optionalMissingNames,
+            duplicateHeaderNames = duplicateNames,
             extraHeaderNames = extraNames,
-            hasExtraColumns = extra.isNotEmpty(),
-            status = if (missing.isEmpty()) {
+            isOptionsImport = collection?.isOptions == true,
+            optionsDedupFieldName = optionsDedupField?.displayName,
+            status = if (duplicateNames.isEmpty()) {
                 ImportValidationStatus.VALID
             } else {
-                ImportValidationStatus.MISSING_REQUIRED_COLUMNS
+                ImportValidationStatus.DUPLICATE_HEADERS
             },
             validationState = ImportValidationState(
-                isValid = missing.isEmpty(),
+                isValid = duplicateNames.isEmpty(),
                 normalizedHeaders = normalizedHeaders,
                 sheet = preview.sheet,
                 headerRowIndex = headerRowIndex
             )
+        )
+    }
+
+    private fun buildOptionsImportContext(
+        collection: CollectionOption,
+        importPlan: List<ImportColumnBinding>
+    ): OptionsImportContext? {
+        if (!collection.isOptions) return null
+
+        val dedupField = importPlan.firstOrNull { it.field.optionDisplayRole == "primary" }
+            ?: importPlan.firstOrNull()
+            ?: return null
+
+        return OptionsImportContext(
+            dedupFieldId = dedupField.field.id,
+            dedupFieldDisplayName = dedupField.field.displayName,
+            existingNormalizedValues = databaseHelper.loadExistingOptionImportValueCache(dedupField.field.id)
         )
     }
 }

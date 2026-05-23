@@ -1,38 +1,35 @@
 package com.pwa.offline
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.AutoCompleteTextView
 import android.widget.Button
-import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.activity.result.contract.ActivityResultContracts
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.snackbar.Snackbar
+import com.pwa.offline.dialogs.FieldEditDialogHelper
 import kotlinx.coroutines.launch
 
 class RecordCreateFragment : Fragment() {
 
-    private sealed interface PendingAction {
-        data class Save(val updates: Map<Long, String>) : PendingAction
+    private enum class PendingAction {
+        NONE,
+        CLEARING,
+        SAVING
     }
 
     private val viewModel: RecordCreateViewModel by viewModels {
@@ -46,27 +43,18 @@ class RecordCreateFragment : Fragment() {
     private lateinit var rootView: View
     private lateinit var tableSelector: AutoCompleteTextView
     private lateinit var statusText: TextView
-    private lateinit var fieldsRecyclerView: RecyclerView
+    private lateinit var progressIndicator: LinearProgressIndicator
+    private lateinit var saveProgress: ProgressBar
+    private lateinit var saveLoadingText: TextView
+    private lateinit var fieldsContainer: android.widget.LinearLayout
     private lateinit var saveButton: Button
     private lateinit var clearButton: Button
     private lateinit var fieldsEmptyText: TextView
-    private lateinit var fieldAdapter: AssetFieldAdapter
+    private lateinit var formRenderer: RecordCreateFormRenderer
     private var renderedFormVersion: Long = -1L
-    private var pendingAction: PendingAction? = null
-    private val locationPermissions = arrayOf(
-        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-        android.Manifest.permission.ACCESS_FINE_LOCATION
-    )
-    private val locationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-            val action = pendingAction ?: return@registerForActivityResult
-            pendingAction = null
-            if (grants.values.any { it }) {
-                performPendingActionWithLocation(action)
-            } else {
-                performPendingAction(action, null)
-            }
-        }
+    private var latestState = RecordCreateUiState()
+    private var pendingAction = PendingAction.NONE
+    private var lastToastKey: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,20 +70,22 @@ class RecordCreateFragment : Fragment() {
         rootView = view.findViewById(R.id.recordCreateRoot)
         tableSelector = view.findViewById(R.id.recordCreateTableSelector)
         statusText = view.findViewById(R.id.recordCreateStatusText)
-        fieldsRecyclerView = view.findViewById(R.id.recordCreateFieldsRecyclerView)
+        progressIndicator = view.findViewById(R.id.recordCreateProgressIndicator)
+        saveProgress = view.findViewById(R.id.recordCreateSaveProgress)
+        saveLoadingText = view.findViewById(R.id.recordCreateSaveLoadingText)
+        fieldsContainer = view.findViewById(R.id.recordCreateFieldsContainer)
         saveButton = view.findViewById(R.id.recordCreateSaveButton)
         clearButton = view.findViewById(R.id.recordCreateClearButton)
         fieldsEmptyText = view.findViewById(R.id.recordCreateFieldsEmptyText)
 
-        fieldAdapter = AssetFieldAdapter(
+        formRenderer = RecordCreateFormRenderer(
+            context = requireContext(),
+            container = fieldsContainer,
             emptyValueLabel = getString(R.string.record_create_empty_value),
             booleanLabel = getString(R.string.asset_boolean_label),
-            labelFormatter = { it.fieldDisplayName },
             onFieldFocused = ::ensureFieldVisible,
-            optionSuggestionsProvider = ::loadOptionSuggestions
+            onListFieldEditRequested = ::openListFieldEditor
         )
-        fieldsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
-        fieldsRecyclerView.adapter = fieldAdapter
 
         tableSelector.setOnItemClickListener { _, _, position, _ ->
             val option = viewModel.uiState.value.collectionOptions.getOrNull(position) ?: return@setOnItemClickListener
@@ -104,11 +94,13 @@ class RecordCreateFragment : Fragment() {
         }
 
         saveButton.setOnClickListener {
+            if (!beginSaveAction()) return@setOnClickListener
             hideKeyboard()
-            requestActionWithLocation(PendingAction.Save(fieldAdapter.buildUpdates()))
+            viewModel.save(formRenderer.buildUpdates())
         }
 
         clearButton.setOnClickListener {
+            if (!beginClearAction()) return@setOnClickListener
             val selectedId = viewModel.uiState.value.selectedCollection?.id ?: return@setOnClickListener
             hideKeyboard()
             viewModel.selectCollection(selectedId)
@@ -126,6 +118,11 @@ class RecordCreateFragment : Fragment() {
     }
 
     private fun renderState(state: RecordCreateUiState) {
+        latestState = state
+        if (!state.isBusy) {
+            pendingAction = PendingAction.NONE
+        }
+        renderValidationToast(state)
         val selectorAdapter = android.widget.ArrayAdapter(
             requireContext(),
             android.R.layout.simple_dropdown_item_1line,
@@ -135,14 +132,20 @@ class RecordCreateFragment : Fragment() {
         tableSelector.setText(state.selectedCollection?.displayName.orEmpty(), false)
 
         if (state.formVersion != renderedFormVersion) {
-            fieldAdapter.submitFields(state.formFields, true)
+            formRenderer.render(state.formFields)
             renderedFormVersion = state.formVersion
         }
         fieldsEmptyText.isVisible = state.selectedCollection != null && state.formFields.isEmpty()
 
-        saveButton.isEnabled = state.selectedCollection != null && state.formFields.isNotEmpty() && !state.isBusy
-        clearButton.isEnabled = state.selectedCollection != null && !state.isBusy
-        tableSelector.isEnabled = !state.isBusy
+        val busy = state.isBusy || pendingAction != PendingAction.NONE
+        val saveLoading = pendingAction == PendingAction.SAVING || state.status == RecordCreateStatus.SAVING
+        saveButton.isEnabled = state.selectedCollection != null && state.formFields.isNotEmpty() && !busy
+        clearButton.isEnabled = state.selectedCollection != null && !busy
+        tableSelector.isEnabled = !busy
+        progressIndicator.isVisible = busy
+        saveProgress.isVisible = saveLoading
+        saveLoadingText.isVisible = saveLoading
+        saveButton.text = if (saveLoading) "" else getString(R.string.record_create_save_button)
 
         statusText.text = when (state.status) {
             RecordCreateStatus.EMPTY -> getString(R.string.record_create_status_no_tables)
@@ -160,6 +163,58 @@ class RecordCreateFragment : Fragment() {
             } ?: getString(R.string.record_create_status_saved_generic)
             RecordCreateStatus.ERROR -> state.errorMessage ?: getString(R.string.record_create_status_error)
         }
+    }
+
+    private fun renderValidationToast(state: RecordCreateUiState) {
+        val message = when (state.status) {
+            RecordCreateStatus.ERROR -> state.errorMessage?.trim()?.takeIf { it.isNotEmpty() }
+            else -> null
+        } ?: run {
+            lastToastKey = null
+            return
+        }
+
+        if (state.isBusy) return
+
+        val toastKey = "${state.status}|$message"
+        if (toastKey == lastToastKey) return
+        lastToastKey = toastKey
+
+        Snackbar.make(rootView, message, Snackbar.LENGTH_LONG).show()
+    }
+
+    private fun beginSaveAction(): Boolean {
+        val state = latestState
+        if (pendingAction != PendingAction.NONE || state.isBusy || state.selectedCollection == null || state.formFields.isEmpty()) {
+            return false
+        }
+        pendingAction = PendingAction.SAVING
+        progressIndicator.isVisible = true
+        saveProgress.isVisible = true
+        saveLoadingText.isVisible = true
+        saveButton.isEnabled = false
+        clearButton.isEnabled = false
+        tableSelector.isEnabled = false
+        saveButton.text = ""
+        statusText.text = getString(R.string.record_create_status_saving)
+        return true
+    }
+
+    private fun beginClearAction(): Boolean {
+        val state = latestState
+        if (pendingAction != PendingAction.NONE || state.isBusy || state.selectedCollection == null) {
+            return false
+        }
+        pendingAction = PendingAction.CLEARING
+        progressIndicator.isVisible = true
+        saveProgress.isVisible = false
+        saveLoadingText.isVisible = false
+        saveButton.isEnabled = false
+        clearButton.isEnabled = false
+        tableSelector.isEnabled = false
+        saveButton.text = getString(R.string.record_create_save_button)
+        statusText.text = getString(R.string.record_create_status_loading_fields)
+        return true
     }
 
     private fun hideKeyboard() {
@@ -181,7 +236,7 @@ class RecordCreateFragment : Fragment() {
     }
 
     private fun ensureFieldVisible(focusedView: View) {
-        fieldsRecyclerView.postDelayed({
+        fieldsContainer.postDelayed({
             focusedView.requestRectangleOnScreen(
                 android.graphics.Rect(0, 0, focusedView.width, focusedView.height),
                 true
@@ -201,73 +256,19 @@ class RecordCreateFragment : Fragment() {
         viewModel.requestOptionSuggestions(sourceCollectionId, query, onResult)
     }
 
-    private fun requestActionWithLocation(action: PendingAction) {
-        if (hasAnyLocationPermission()) {
-            if (!ActionLocationCapture.isLocationServiceEnabled(requireContext().applicationContext)) {
-                showLocationServicePrompt(action)
-                return
-            }
-            performPendingActionWithLocation(action)
-            return
-        }
-        pendingAction = action
-        showLocationPermissionPrompt()
+    private fun openListFieldEditor(
+        field: AssetFieldValue,
+        currentValue: String,
+        onValueSelected: (String) -> Unit
+    ) {
+        FieldEditDialogHelper.showListSelector(
+            context = requireContext(),
+            inflater = layoutInflater,
+            field = field,
+            initialValue = currentValue,
+            loadOptionSuggestions = ::loadOptionSuggestions,
+            onValueSelected = onValueSelected
+        )
     }
 
-    private fun performPendingActionWithLocation(action: PendingAction) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val locationMeta = runCatching {
-                ActionLocationCapture.captureBestEffort(requireContext().applicationContext)
-            }.getOrNull()
-            performPendingAction(action, locationMeta)
-        }
-    }
-
-    private fun performPendingAction(action: PendingAction, locationMeta: ActionLocationMeta?) {
-        when (action) {
-            is PendingAction.Save -> viewModel.save(action.updates, locationMeta)
-        }
-    }
-
-    private fun hasAnyLocationPermission(): Boolean {
-        return locationPermissions.any { permission ->
-            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    private fun showLocationPermissionPrompt() {
-        val action = pendingAction ?: return
-        val shouldExplain = locationPermissions.any(::shouldShowRequestPermissionRationale)
-        val messageRes = if (shouldExplain) {
-            R.string.location_permission_rationale
-        } else {
-            R.string.location_permission_request_message
-        }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.location_permission_request_title)
-            .setMessage(messageRes)
-            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
-                pendingAction = null
-                performPendingAction(action, null)
-            }
-            .setPositiveButton(R.string.location_permission_continue) { _, _ ->
-                locationPermissionLauncher.launch(locationPermissions)
-            }
-            .show()
-    }
-
-    private fun showLocationServicePrompt(action: PendingAction) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.location_service_request_title)
-            .setMessage(R.string.location_service_request_message)
-            .setNegativeButton(R.string.location_permission_skip) { _, _ ->
-                pendingAction = null
-                performPendingAction(action, null)
-            }
-            .setPositiveButton(R.string.location_service_open_settings) { _, _ ->
-                pendingAction = null
-                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            }
-            .show()
-    }
 }
