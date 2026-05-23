@@ -1,60 +1,116 @@
-# Gradle and build outputs
+# ------------------------------
+# Android / Gradle build outputs
+# ------------------------------
 .gradle/
 build/
+**/build/
 android/.gradle/
 android/build/
 android/app/build/
-android/*/build/
-android/backups/
-# Local SDK and machine-specific config
+
+# ------------------------------
+# Kotlin / compiler local caches
+# ------------------------------
+.kotlin/
+android/.kotlin/
+**/.kotlin/
+*.kotlin_module
+
+# ------------------------------
+# Local SDK / machine config
+# ------------------------------
 local.properties
 android/local.properties
 android/env.android.ps1
+
+# ------------------------------
+# Signing / secrets
+# ------------------------------
 keystore.properties
 android/keystore.properties
-
-# IDE metadata
-.idea/
-android/.idea/
-*.iml
-*.ipr
-*.iws
-
-# Android Studio capture output
-captures/
-android/captures/
-
-# APK/AAB and signing artifacts
-*.apk
-*.aab
-*.ap_
-*.keystore
 *.jks
+*.keystore
 *.pem
 *.p12
 *.key
 *.csr
 
-# Local databases and snapshots
+# ------------------------------
+# Generated app artifacts
+# ------------------------------
+*.apk
+*.aab
+*.ap_
+*.aar
+*.dex
+*.class
+bin/
+gen/
+out/
+proguard/
+
+# ------------------------------
+# Native / external build outputs
+# ------------------------------
+.cxx/
+android/.cxx/
+.externalNativeBuild/
+externalNativeBuild/
+android/externalNativeBuild/
+
+# ------------------------------
+# IDE / editor metadata
+# ------------------------------
+.idea/
+android/.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# ------------------------------
+# Android Studio / tooling temp
+# ------------------------------
+captures/
+android/captures/
+.navigation/
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+vcs.xml
+
+# ------------------------------
+# Logs / profiling / crash output
+# ------------------------------
+*.log
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# ------------------------------
+# Local databases / snapshots / backups
+# ------------------------------
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
 *.sqlite
 *.sqlite3
+android/backups/
 
-# Native and external build outputs
-.cxx/
-android/.cxx/
-externalNativeBuild/
-android/externalNativeBuild/
+# ------------------------------
+# Capacitor / copied web assets
+# ------------------------------
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/res/xml/config.xml
+android/capacitor-cordova-android-plugins/
 
-# Kotlin / Java crash and profiling artifacts
-*.hprof
-hs_err_pid*
-replay_pid*
-
+# ------------------------------
 # OS junk
+# ------------------------------
 .DS_Store
 Thumbs.db
 desktop.ini
