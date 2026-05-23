@@ -10,6 +10,8 @@ android/backups/
 local.properties
 android/local.properties
 android/env.android.ps1
+keystore.properties
+android/keystore.properties
 
 # IDE metadata
 .idea/
@@ -28,6 +30,18 @@ android/captures/
 *.ap_
 *.keystore
 *.jks
+*.pem
+*.p12
+*.key
+*.csr
+
+# Local databases and snapshots
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
 # Native and external build outputs
 .cxx/
