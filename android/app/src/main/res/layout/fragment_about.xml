@@ -48,6 +48,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:text="@string/about_database_version_label"
+                style="@style/TextAppearance.PatriGO.Label" />
+
+            <TextView
+                android:id="@+id/aboutDatabaseVersionText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                style="@style/TextAppearance.PatriGO.Value" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="@string/about_repo_label"
                 style="@style/TextAppearance.PatriGO.Label" />
 

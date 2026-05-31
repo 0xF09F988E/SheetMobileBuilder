@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:background="@drawable/app_dropdown_item_background"
     android:gravity="center_vertical"
+    android:layout_marginBottom="8dp"
     android:minHeight="48dp"
     android:paddingStart="14dp"
     android:paddingTop="10dp"

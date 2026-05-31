@@ -2478,6 +2478,10 @@ class AppDatabaseHelper(context: Context) :
         private const val OPTION_DISPLAY_ROLE_NONE = "none"
         private const val OPTION_DISPLAY_ROLE_PRIMARY = "primary"
         private const val OPTION_DISPLAY_ROLE_SUPPORT = "support"
+
+        fun databaseName(): String = DATABASE_NAME
+
+        fun databaseVersion(): Int = DATABASE_VERSION
     }
 }
 

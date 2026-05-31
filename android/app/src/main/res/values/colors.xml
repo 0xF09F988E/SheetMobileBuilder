@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="forest">#5717d7</color>
-    <color name="forest_dark">#390998</color>
-    <color name="amber">#e85811</color>
-    <color name="paper">#F3F3F3</color>
-    <color name="paper_alt">#FFFFFF</color>
-    <color name="paper_glass">#f3f0f9</color>
-    <color name="paper_glass_alt">#e7e1f4</color>
-    <color name="paper_glass_tag">#e8f7ed</color>
-    <color name="line">#bda9e4</color>
-    <color name="line_strong">#6f39da</color>
-    <color name="line_glass">#bda9e4</color>
-    <color name="line_glass_strong">#6f39da</color>
+    <color name="forest">#ea4a2a</color>
+    <color name="forest_dark">#bd280a</color>
+    <color name="amber">#f19f2c</color>
+    <color name="paper">#faf2f0</color>
+    <color name="paper_alt">#f5e4e0</color>
+    <color name="paper_glass">#faf2f0</color>
+    <color name="paper_glass_alt">#f5e4e0</color>
+    <color name="paper_glass_tag">#f8f8e8</color>
+    <color name="line">#e5b3a9</color>
+    <color name="line_strong">#dc5338</color>
+    <color name="line_glass">#e5b3a9</color>
+    <color name="line_glass_strong">#dc5338</color>
     <color name="success">#328f4a</color>
     <color name="error">#ae3229</color>
-    <color name="ink">#241b37</color>
-    <color name="muted_ink">#5a4c76</color>
+    <color name="ink">#37201b</color>
+    <color name="muted_ink">#76534c</color>
 </resources>

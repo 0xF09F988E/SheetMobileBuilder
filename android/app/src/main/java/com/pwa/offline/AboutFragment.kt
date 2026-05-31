@@ -29,6 +29,8 @@ class AboutFragment : Fragment() {
             .orEmpty()
         view.findViewById<TextView>(R.id.aboutVersionText).text =
             getString(R.string.about_version_value, versionName)
+        view.findViewById<TextView>(R.id.aboutDatabaseVersionText).text =
+            getString(R.string.about_database_version_value, AppDatabaseHelper.databaseVersion())
 
         view.findViewById<Button>(R.id.aboutRepoButton).setOnClickListener {
             startActivity(
