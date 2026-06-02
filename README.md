@@ -1,4 +1,4 @@
-# PatriGO
+# SheetMobileBuilder
 
 ![Android](https://img.shields.io/badge/Android-7%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Android-7F52FF?logo=kotlin&logoColor=white)
@@ -6,7 +6,7 @@
 ![Offline First](https://img.shields.io/badge/Mode-Offline%20First-2F855A)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
-PatriGO is an Android app for building local data structures, importing spreadsheet data, capturing records in the field, reviewing them offline, and exporting results without depending on a server.
+SheetMobileBuilder is an Android app for building local data structures, importing spreadsheet data, capturing records in the field, reviewing them offline, and exporting results without depending on a server.
 
 It is designed as an agnostic mobile data tool. The app is not tied to a single domain model: users define their own tables and fields, then work with those records locally on the device.
 
@@ -34,7 +34,7 @@ It is designed as an agnostic mobile data tool. The app is not tied to a single 
 
 ## Product Direction
 
-PatriGO follows a few practical rules:
+SheetMobileBuilder follows a few practical rules:
 
 - Offline-first: records live on the device
 - Agnostic data model: users define the structure
